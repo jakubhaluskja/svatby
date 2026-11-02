@@ -87,3 +87,27 @@ export async function submitRsvp(site: string, token: string, payload: RsvpPaylo
   }
   return { ok: true };
 }
+
+export type UnlockState = { error?: boolean };
+
+/** Odemčení webu chráněného heslem. */
+export async function unlockSite(site: string, _: UnlockState, formData: FormData): Promise<UnlockState> {
+  const { cookies } = await import("next/headers");
+  const { unlockCookieName, unlockToken, verifySitePassword } = await import("@/lib/site-password");
+  const wedding = await resolveWedding(site);
+  if (!wedding) return { error: true };
+  const db = createAdminClient();
+  const { data } = await db.from("weddings").select("password_hash").eq("id", wedding.id).single();
+  const password = String(formData.get("password") ?? "");
+  if (!data?.password_hash || !verifySitePassword(password, data.password_hash)) return { error: true };
+
+  const jar = await cookies();
+  jar.set(unlockCookieName(wedding.id), unlockToken(wedding.id, data.password_hash), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 180,
+  });
+  redirect(`${await siteBase(site)}/`);
+}

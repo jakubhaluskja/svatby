@@ -83,6 +83,8 @@ export type SiteEvent = {
   id: string;
   name: string;
   description: string;
+  /** Původní lokalizované texty pro přepnutí jazyka */
+  i18n: { name: unknown; description: unknown; plan_b_note: unknown };
   starts_at: string | null;
   ends_at: string | null;
   location_name: string | null;
@@ -90,6 +92,7 @@ export type SiteEvent = {
   plan_b_active: boolean;
   plan_b_location_name: string | null;
   plan_b_address: string | null;
+  plan_b_note: string;
 };
 
 type EventRow = {
@@ -104,6 +107,7 @@ type EventRow = {
   plan_b_active: boolean;
   plan_b_location_name: string | null;
   plan_b_address: string | null;
+  plan_b_note: unknown;
 };
 
 function toSiteEvent(e: EventRow, locale: Locale): SiteEvent {
@@ -111,6 +115,7 @@ function toSiteEvent(e: EventRow, locale: Locale): SiteEvent {
     id: e.id,
     name: tr(e.name, locale),
     description: tr(e.description, locale),
+    i18n: { name: e.name, description: e.description, plan_b_note: e.plan_b_note },
     starts_at: e.starts_at,
     ends_at: e.ends_at,
     location_name: e.location_name,
@@ -118,11 +123,22 @@ function toSiteEvent(e: EventRow, locale: Locale): SiteEvent {
     plan_b_active: e.plan_b_active,
     plan_b_location_name: e.plan_b_location_name,
     plan_b_address: e.plan_b_address,
+    plan_b_note: tr(e.plan_b_note, locale),
   };
 }
 
 const EVENT_FIELDS =
-  "id, name, description, starts_at, ends_at, location_name, address, visibility, plan_b_active, plan_b_location_name, plan_b_address";
+  "id, name, description, starts_at, ends_at, location_name, address, visibility, plan_b_active, plan_b_location_name, plan_b_address, plan_b_note";
+
+/** Přeloží události do jazyka stránky. */
+export function localizeEvents<T extends SiteEvent>(events: T[], locale: Locale): T[] {
+  return events.map((e) => ({
+    ...e,
+    name: tr(e.i18n.name, locale),
+    description: tr(e.i18n.description, locale),
+    plan_b_note: tr(e.i18n.plan_b_note, locale),
+  }));
+}
 
 /** Veřejné události (pro web bez osobního odkazu). */
 export async function publicEvents(weddingId: string, locale: Locale): Promise<SiteEvent[]> {
@@ -223,4 +239,92 @@ export async function tokenByShortCode(weddingId: string, code: string): Promise
   const db = createAdminClient();
   const { data } = await db.from("households").select("token").eq("wedding_id", weddingId).eq("short_code", normalized).maybeSingle();
   return data?.token ?? null;
+}
+
+export type SiteContent = {
+  sections: import("@/lib/site-sections").Section[];
+  template: string;
+  gifts: { iban: string | null; holder: string | null };
+};
+
+/** Obsah webu: hosté vidí zveřejněnou verzi, náhled páru koncept. */
+export async function siteContent(wedding: PublicWedding): Promise<SiteContent> {
+  const { normalizeSections } = await import("@/lib/site-sections");
+  const db = createAdminClient();
+  const [{ data: pages }, { data: gifts }] = await Promise.all([
+    db.from("site_pages").select("state, sections, template").eq("wedding_id", wedding.id),
+    db.from("gift_settings").select("iban, account_holder").eq("wedding_id", wedding.id).maybeSingle(),
+  ]);
+  const draft = pages?.find((p) => p.state === "draft");
+  const published = pages?.find((p) => p.state === "published");
+  const page = wedding.preview ? draft ?? published : published ?? draft;
+  return {
+    sections: normalizeSections(page?.sections),
+    template: page?.template ?? wedding.template,
+    gifts: { iban: gifts?.iban ?? null, holder: gifts?.account_holder ?? null },
+  };
+}
+
+/** Jazyk stránky: ?lang=en, pokud ho web nabízí; jinak jazyk domácnosti nebo výchozí. */
+export function pickLocale(wedding: PublicWedding, requested: string | undefined, fallback?: Locale): Locale {
+  if ((requested === "cs" || requested === "en") && wedding.locales.includes(requested)) return requested;
+  if (fallback && wedding.locales.includes(fallback)) return fallback;
+  return wedding.default_locale;
+}
+
+export type SiteAccess = { locked: boolean; hidden: string[] };
+
+/**
+ * Ochrana heslem. Celý web, nebo jen vybrané sekce. Osobní odkaz domácnosti heslo obchází.
+ */
+export async function siteAccess(wedding: PublicWedding, viaHouseholdLink: boolean): Promise<SiteAccess> {
+  if (wedding.password_scope === "none" || viaHouseholdLink || wedding.preview) return { locked: false, hidden: [] };
+  const { cookies } = await import("next/headers");
+  const { isUnlocked, unlockCookieName } = await import("@/lib/site-password");
+  const db = createAdminClient();
+  const { data } = await db.from("weddings").select("password_hash, protected_sections").eq("id", wedding.id).single();
+  const jar = await cookies();
+  if (isUnlocked(wedding.id, data?.password_hash ?? null, jar.get(unlockCookieName(wedding.id))?.value)) {
+    return { locked: false, hidden: [] };
+  }
+  if (wedding.password_scope === "site") return { locked: true, hidden: [] };
+  return { locked: false, hidden: data?.protected_sections ?? [] };
+}
+
+/**
+ * Oznámení nahoře na webu: aktivní plán B a zprávy hostům.
+ * Zprávy pro konkrétní událost vidí jen domácnosti, které jsou na ni pozvané.
+ */
+export async function siteNotices(
+  wedding: PublicWedding,
+  events: SiteEvent[],
+  locale: Locale,
+  invitedEventIds: string[] | null,
+): Promise<string[]> {
+  const { SITE_COPY } = await import("@/lib/site-copy");
+  const notices: string[] = [];
+  for (const e of events) {
+    if (!e.plan_b_active) continue;
+    const where = [e.plan_b_location_name, e.plan_b_address].filter(Boolean).join(", ");
+    notices.push(`${SITE_COPY[locale].planB}: ${e.name}${where ? ` → ${where}` : ""}.${e.plan_b_note ? ` ${e.plan_b_note}` : ""}`);
+  }
+
+  const db = createAdminClient();
+  const now = new Date().toISOString();
+  const { data } = await db
+    .from("broadcasts")
+    .select("body, audience, event_id, scheduled_at")
+    .eq("wedding_id", wedding.id)
+    .eq("kind", "message")
+    .eq("show_banner", true)
+    .lte("scheduled_at", now)
+    .or(`banner_until.is.null,banner_until.gt.${now}`)
+    .order("scheduled_at", { ascending: false })
+    .limit(3);
+  for (const m of data ?? []) {
+    if (m.audience === "event" && !(invitedEventIds ?? []).includes(m.event_id)) continue;
+    const text = tr(m.body, locale);
+    if (text) notices.push(text);
+  }
+  return notices;
 }

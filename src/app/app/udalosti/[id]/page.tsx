@@ -15,7 +15,7 @@ export default async function EditEventPage({ params }: Props) {
   const supabase = await createClient();
   const { data: e } = await supabase
     .from("events")
-    .select("id, name, description, starts_at, ends_at, location_name, address, visibility, is_seated")
+    .select("id, name, description, starts_at, ends_at, location_name, address, visibility, is_seated, plan_b_location_name, plan_b_address, plan_b_note")
     .eq("id", id)
     .eq("wedding_id", wedding.id)
     .maybeSingle();
@@ -44,6 +44,10 @@ export default async function EditEventPage({ params }: Props) {
           description_en: description.en,
           visibility: e.visibility as "public" | "invited",
           is_seated: e.is_seated,
+          plan_b_location_name: e.plan_b_location_name ?? undefined,
+          plan_b_address: e.plan_b_address ?? undefined,
+          plan_b_note_cs: (e.plan_b_note as Record<string, string> | null)?.cs,
+          plan_b_note_en: (e.plan_b_note as Record<string, string> | null)?.en,
         }}
       />
       <details className="border-t border-line pt-6">

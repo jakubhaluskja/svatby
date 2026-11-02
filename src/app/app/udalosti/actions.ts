@@ -26,6 +26,10 @@ const schema = z
     address: optional,
     description_cs: optional,
     description_en: optional,
+    plan_b_location_name: optional,
+    plan_b_address: optional,
+    plan_b_note_cs: optional,
+    plan_b_note_en: optional,
     visibility: z.enum(["public", "invited"]),
     is_seated: z.boolean(),
   })
@@ -43,6 +47,10 @@ function read(formData: FormData) {
     address: get("address"),
     description_cs: get("description_cs"),
     description_en: get("description_en"),
+    plan_b_location_name: get("plan_b_location_name"),
+    plan_b_address: get("plan_b_address"),
+    plan_b_note_cs: get("plan_b_note_cs"),
+    plan_b_note_en: get("plan_b_note_en"),
     visibility: get("visibility") ?? "public",
     is_seated: formData.get("is_seated") === "on",
   });
@@ -70,6 +78,14 @@ export async function saveEvent(eventId: string | null, _: EventFormState, formD
     address: v.address,
     visibility: v.visibility,
     is_seated: v.is_seated,
+    plan_b_location_name: v.plan_b_location_name,
+    plan_b_address: v.plan_b_address,
+    plan_b_note: {
+      ...(v.plan_b_note_cs ? { cs: v.plan_b_note_cs } : {}),
+      ...(v.plan_b_note_en ? { en: v.plan_b_note_en } : {}),
+    },
+    // bez náhradního místa nemůže být plán B aktivní
+    ...(v.plan_b_location_name || v.plan_b_address ? {} : { plan_b_active: false }),
   };
 
   const supabase = await createClient();
@@ -92,4 +108,18 @@ export async function deleteEvent(eventId: string) {
   await supabase.from("events").delete().eq("id", eventId).eq("wedding_id", wedding.id);
   revalidatePath("/app/udalosti");
   redirect("/app/udalosti");
+}
+
+/** Přepnutí na náhradní místo (plán B) a zpět. */
+export async function setPlanB(eventId: string, active: boolean) {
+  const wedding = await requireWedding();
+  const supabase = await createClient();
+  await supabase
+    .from("events")
+    .update({ plan_b_active: active, plan_b_activated_at: active ? new Date().toISOString() : null })
+    .eq("id", eventId)
+    .eq("wedding_id", wedding.id)
+    .or("plan_b_location_name.not.is.null,plan_b_address.not.is.null");
+  revalidatePath("/app/web");
+  revalidatePath("/app/udalosti");
 }

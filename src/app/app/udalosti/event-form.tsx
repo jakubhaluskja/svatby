@@ -17,6 +17,10 @@ export type EventDefaults = {
   description_en?: string;
   visibility?: "public" | "invited";
   is_seated?: boolean;
+  plan_b_location_name?: string;
+  plan_b_address?: string;
+  plan_b_note_cs?: string;
+  plan_b_note_en?: string;
 };
 
 export function EventForm({ eventId, defaults, showEnglish }: { eventId: string | null; defaults: EventDefaults; showEnglish: boolean }) {
@@ -90,6 +94,23 @@ export function EventForm({ eventId, defaults, showEnglish }: { eventId: string 
           <span className="block text-sm text-ink-soft">Pro tuto událost připravíte zasedací pořádek.</span>
         </span>
       </label>
+
+      <details className="rounded-xl border border-line bg-surface p-4" open={!!defaults.plan_b_location_name}>
+        <summary className="cursor-pointer font-medium">Plán B pro špatné počasí</summary>
+        <div className="mt-4 flex flex-col gap-5">
+          <p className="text-sm text-ink-soft">
+            Náhradní místo si připravíte předem. Když bude pršet, přepnete ho jedním kliknutím v sekci Web a hosté ho uvidí v programu.
+          </p>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Náhradní místo" name="plan_b_location_name" maxLength={120} defaultValue={defaults.plan_b_location_name} placeholder="Například Stodola u statku" />
+            <Field label="Adresa náhradního místa" name="plan_b_address" maxLength={200} defaultValue={defaults.plan_b_address} hint="Prázdné = stejná adresa." />
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Vzkaz pro hosty" name="plan_b_note_cs" maxLength={300} defaultValue={defaults.plan_b_note_cs} placeholder="Obřad přesouváme pod střechu." />
+            {showEnglish ? <Field label="Vzkaz anglicky" name="plan_b_note_en" maxLength={300} defaultValue={defaults.plan_b_note_en} /> : null}
+          </div>
+        </div>
+      </details>
 
       {state.error ? <FormMessage>{state.error}</FormMessage> : null}
 

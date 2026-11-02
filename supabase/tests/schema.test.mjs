@@ -8,9 +8,14 @@ const repo = process.argv[2] ?? new URL('../..', import.meta.url).pathname;
 const db = new PGlite({ extensions: { citext } });
 
 const stub = `
+create schema storage;
+create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid);
+alter table storage.objects enable row level security;
 create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
 create schema auth; create schema extensions;
-grant usage on schema public, auth, extensions to anon, authenticated, service_role;
+grant usage on schema public, auth, extensions, storage to anon, authenticated, service_role;
+grant all on storage.objects to authenticated;
 create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}');
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.sub', true), '')::uuid $$;
 grant execute on function auth.uid() to anon, authenticated, service_role;
@@ -208,6 +213,20 @@ await expectError('spoluorganizátor bez zápisu nemůže ukládat', () => q(`se
   name: 'X', guests: [{ first_name: 'Y' }] })]), 'forbidden');
 await expectError('spoluorganizátor nemůže přegenerovat odkaz', () => q(`select * from regenerate_household_link($1)`, [hid2]), 'forbidden');
 await expectError('nemůže zapsat historii za pár', () => q(`insert into rsvp_log (wedding_id, household_id, actor_kind, actor_user_id, payload) values ($1,$2,'member',$3,'{}')`, [wid, hid2, coorg.id]), 'row-level security');
+
+
+// --- editor webu: fotky a zveřejnění
+await as('authenticated', owner.id);
+await q(`insert into storage.objects (bucket_id, name) values ('site-media', $1)`, [`${wid}/foto.jpg`]);
+check('pár nahraje fotku do své složky', true);
+await expectError('nelze nahrát do cizí složky', () => q(`insert into storage.objects (bucket_id, name) values ('site-media', $1)`, ['00000000-0000-0000-0000-000000000000/x.jpg']), 'row-level security');
+await expectError('neplatná cesta odmítnuta', () => q(`insert into storage.objects (bucket_id, name) values ('site-media', 'bez-slozky.jpg')`), 'row-level security');
+await q(`update site_pages set sections = '[{"type":"hero","enabled":true,"content":{"intro":{"cs":"Ahoj"}}}]', template='boho' where wedding_id=$1 and state='draft'`, [wid]);
+await q(`select publish_site($1)`, [wid]);
+const [pub] = await q(`select sections, template from site_pages where wedding_id=$1 and state='published'`, [wid]);
+check('zveřejnění zkopíruje koncept', pub.template === 'boho' && pub.sections[0].content.intro.cs === 'Ahoj');
+await as('authenticated', coorg.id);
+await expectError('spoluorganizátor bez práv nezveřejní', () => q(`select publish_site($1)`, [wid]), 'forbidden');
 
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);

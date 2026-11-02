@@ -96,3 +96,14 @@ export const SITE_COPY = {
 
 export type SiteCopy = (typeof SITE_COPY)["cs"];
 export const siteCopy = (locale: Locale): SiteCopy => SITE_COPY[locale] as SiteCopy;
+
+/** Nadpisy sekcí na webu. */
+export const SECTION_TITLES = {
+  cs: { schedule: "Program", location: "Jak se k nám dostanete", story: "Náš příběh", dresscode: "Dress code", accommodation: "Ubytování", gifts: "Dary", faq: "Časté dotazy", contacts: "Kontakty", rsvp: "Potvrzení účasti" },
+  en: { schedule: "Schedule", location: "Getting there", story: "Our story", dresscode: "Dress code", accommodation: "Accommodation", gifts: "Gifts", faq: "FAQ", contacts: "Contacts", rsvp: "RSVP" },
+} as const;
+
+export const GIFT_COPY = {
+  cs: { account: "Číslo účtu", holder: "Majitel účtu", qr: "Naskenujte v bankovní aplikaci, částku zvolíte sami.", message: "Svatební dar" },
+  en: { account: "Bank account", holder: "Account holder", qr: "Scan with your banking app and choose the amount.", message: "Wedding gift" },
+} as const;

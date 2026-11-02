@@ -11,6 +11,8 @@ type Props = {
   locale?: "cs" | "en";
   /** Kompaktní varianta pro náhled v telefonu */
   compact?: boolean;
+  /** Pod úvodem následuje fotka – úvod nemusí zabírat celou obrazovku */
+  short?: boolean;
 };
 
 const copy = {
@@ -32,7 +34,7 @@ export function daysUntil(date: string, now = new Date()): number {
 }
 
 /** Úvodní sekce svatebního webu. Sdílí ji web, náhled v editoru i průvodce založením. */
-export function SiteHero({ partner1, partner2, date, place, template, locale = "cs", compact }: Props) {
+export function SiteHero({ partner1, partner2, date, place, template, locale = "cs", compact, short }: Props) {
   const t = getTemplate(template);
   const c = copy[locale];
   const days = date ? daysUntil(date) : null;
@@ -60,7 +62,7 @@ export function SiteHero({ partner1, partner2, date, place, template, locale = "
     <section
       style={style}
       className={`flex flex-col items-center justify-center text-center transition-colors duration-500 ${
-        compact ? "min-h-full px-6 py-16" : "min-h-[85svh] px-6 py-24"
+        compact ? "min-h-full px-6 py-16" : short ? "min-h-[60svh] px-6 pt-24 pb-16" : "min-h-[85svh] px-6 py-24"
       }`}
     >
       <h1
