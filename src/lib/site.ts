@@ -328,3 +328,30 @@ export async function siteNotices(
   }
   return notices;
 }
+
+export type GuestTable = { event: string; guest: string; table: string };
+
+/**
+ * Stůl hosta se zobrazí v den události od půlnoci (v časovém pásmu svatby).
+ */
+export async function householdTables(wedding: PublicWedding, household: GuestHousehold, locale: Locale, now = new Date()): Promise<GuestTable[]> {
+  const { utcToZonedParts } = await import("@/lib/time");
+  const today = utcToZonedParts(now.toISOString(), wedding.timezone).date;
+  const eventsToday = household.events.filter((e) => e.invited && e.starts_at && utcToZonedParts(e.starts_at, wedding.timezone).date <= today);
+  if (eventsToday.length === 0 || household.guests.length === 0) return [];
+
+  const db = createAdminClient();
+  const { data } = await db
+    .from("seat_assignments")
+    .select("guest_id, event_id, layout_items(label)")
+    .in("event_id", eventsToday.map((e) => e.id))
+    .in("guest_id", household.guests.map((g) => g.id));
+
+  const eventName = new Map(localizeEvents(eventsToday, locale).map((e) => [e.id, e.name]));
+  const guestName = new Map(household.guests.map((g) => [g.id, g.first_name]));
+  return (data ?? []).map((row) => ({
+    event: eventName.get(row.event_id) ?? "",
+    guest: guestName.get(row.guest_id) ?? "",
+    table: ((row.layout_items as unknown as { label: string | null } | null)?.label ?? "").trim(),
+  }));
+}

@@ -46,6 +46,7 @@ export const SITE_COPY = {
     error: "Odpověď se nepodařilo odeslat. Zkuste to prosím znovu.",
     tooManyPlusOnes: "Přidali jste víc doprovodů, než je v pozvání.",
     notFound: "Tenhle odkaz nefunguje. Možná vám novomanželé poslali nový.",
+    yourTable: "Kde sedíte",
   },
   en: {
     preview: "Preview. Guests will see the website once it is published.",
@@ -91,6 +92,7 @@ export const SITE_COPY = {
     error: "Your reply could not be sent. Please try again.",
     tooManyPlusOnes: "You have added more plus ones than the invitation allows.",
     notFound: "This link doesn't work. The couple may have sent you a new one.",
+    yourTable: "Your table",
   },
 } satisfies Record<Locale, Record<string, unknown>>;
 

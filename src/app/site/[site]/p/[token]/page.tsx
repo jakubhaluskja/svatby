@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { LanguageSwitch } from "@/components/site/language-switch";
 import { SiteSections } from "@/components/site/site-sections";
 import { SiteShell } from "@/components/site/site-shell";
-import { householdByToken, localizeEvents, pickLocale, resolveWedding, siteContent, siteNotices } from "@/lib/site";
+import { householdByToken, householdTables, localizeEvents, pickLocale, resolveWedding, siteContent, siteNotices } from "@/lib/site";
 import { SiteNotices } from "@/components/site/site-notices";
 import { siteCopy } from "@/lib/site-copy";
 import { RsvpForm } from "./rsvp-form";
@@ -36,11 +36,27 @@ export default async function HouseholdSite({ params, searchParams }: Props) {
     : null;
   const invited = household.events.some((e) => e.invited);
   const events = localizeEvents(household.events, locale);
+  const tables = await householdTables(wedding, household, locale);
   const notices = await siteNotices(wedding, events, locale, household.events.filter((e) => e.invited).map((e) => e.id));
 
   return (
     <SiteShell template={content.template} preview={wedding.preview} previewText={copy.preview}>
       <SiteNotices notices={notices} />
+      {tables.length ? (
+        <section className="flex flex-col items-center gap-2 px-6 py-6 text-center" style={{ background: "var(--site-line)" }}>
+          <h2 className="text-sm" style={{ color: "var(--site-muted)" }}>{copy.yourTable}</h2>
+          {[...new Set(tables.map((t) => t.event))].map((ev) => {
+            const rows = tables.filter((t) => t.event === ev);
+            const same = rows.every((r) => r.table === rows[0].table);
+            return (
+              <p key={ev} className="text-2xl">
+                {tables.length > rows.length || new Set(tables.map((t) => t.event)).size > 1 ? `${ev}: ` : ""}
+                {same ? <strong>{rows[0].table}</strong> : rows.map((r) => `${r.guest} – ${r.table}`).join(", ")}
+              </p>
+            );
+          })}
+        </section>
+      ) : null}
       <div className="relative">
         <LanguageSwitch locales={wedding.locales} current={locale} />
         <SiteSections

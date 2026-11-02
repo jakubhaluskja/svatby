@@ -55,3 +55,12 @@ export async function requireWedding(): Promise<CurrentWedding> {
   if (!wedding) redirect("/app/zalozit");
   return wedding;
 }
+
+export type ModuleName = "guests" | "web" | "seating" | "lodging" | "checklist" | "budget" | "gifts" | "gallery";
+
+/** Úroveň přístupu přihlášeného uživatele k modulu: none / read / write / own. */
+export async function moduleLevel(weddingId: string, module: ModuleName): Promise<"none" | "read" | "write" | "own"> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("my_module_level", { p_wedding_id: weddingId, p_module: module });
+  return (data as "none" | "read" | "write" | "own" | null) ?? "none";
+}

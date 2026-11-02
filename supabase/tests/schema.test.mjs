@@ -236,5 +236,24 @@ await expectError('anonym neuloží domácnost', () => q(`select save_household(
 await as('authenticated', owner.id);
 check('přihlášený pár funkce volat může', (await q(`select count(*)::int c from regenerate_household_link($1)`, [hid2]))[0].c === 1);
 
+
+// --- zasedací pořádek
+await as('authenticated', owner.id);
+const t1 = '11111111-1111-4111-8111-111111111111', t2 = '22222222-2222-4222-8222-222222222222';
+const [{ save_layout: lid }] = await q(`select save_layout($1, $2::jsonb)`, [ev2.id, JSON.stringify([
+  { id: t1, kind: 'table', shape: 'round', label: 'Stůl 1', seats: 8, x: 100, y: 100, w: 120, h: 120 },
+  { id: t2, kind: 'table', shape: 'rect', label: 'Stůl 2', seats: 6, x: 300, y: 100, w: 180, h: 80 },
+])]);
+check('plátno uloženo', !!lid && (await q(`select count(*)::int c from layout_items where layout_id=$1`, [lid]))[0].c === 2);
+await q(`insert into seat_assignments (guest_id, event_id, wedding_id, table_id) values ($1,$2,$3,$4)`, [pavel.id, ev2.id, wid, t2]);
+await q(`select save_layout($1, $2::jsonb)`, [ev2.id, JSON.stringify([{ id: t1, kind: 'table', shape: 'round', label: 'Hlavní', seats: 10, x: 50, y: 50, w: 120, h: 120 }])]);
+check('smazaný stůl uvolní hosty', (await q(`select count(*)::int c from seat_assignments where event_id=$1`, [ev2.id]))[0].c === 0);
+check('stůl přejmenován', (await q(`select label from layout_items where id=$1`, [t1]))[0].label === 'Hlavní');
+await expectError('cizí půdorys odmítnut', () => q(`select save_layout($1, '[]'::jsonb, '00000000-0000-0000-0000-000000000000/plan-x.jpg')`, [ev2.id]), 'invalid_background');
+await q(`insert into storage.objects (bucket_id, name) values ('site-media', $1)`, [`${wid}/plan-abc.jpg`]);
+check('pár nahraje půdorys', true);
+await as('authenticated', coorg.id);
+await expectError('spoluorganizátor bez práv neuloží plátno', () => q(`select save_layout($1, '[]'::jsonb)`, [ev2.id]), 'forbidden');
+
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);
