@@ -26,6 +26,8 @@ export type SeatingGuest = {
   diet: string | null;
   allergies: string | null;
   high_chair: boolean;
+  /** Odpověď na událost: přijde / čeká na odpověď / nepřijde */
+  status: "yes" | "pending" | "no";
   attending: boolean;
 };
 
@@ -35,7 +37,7 @@ export type SeatingData = {
   event: { id: string; name: string; starts_at: string | null };
   layout: { id: string | null; width: number; height: number; background_key: string | null };
   items: LayoutItem[];
-  assignments: { guest_id: string; table_id: string; locked: boolean }[];
+  assignments: { guest_id: string; table_id: string; seat_index: number | null; locked: boolean }[];
   guests: SeatingGuest[];
   rules: SeatingRuleRow[];
   tags: string[];
@@ -43,7 +45,8 @@ export type SeatingData = {
 
 /**
  * Data pro zasedací pořádek jedné události: stoly, rozsazení a hosté.
- * Hosté = potvrzení na událost + ti, kdo už u stolu sedí (i kdyby mezitím odmítli).
+ * Hosté = pozvaní na událost, kteří neodmítli (potvrzení i bez odpovědi)
+ * + ti, kdo už u stolu sedí (i kdyby mezitím odmítli).
  */
 export async function loadSeating(db: SupabaseClient, weddingId: string, eventId: string): Promise<SeatingData | null> {
   const book = await loadGuestBook(db, weddingId);
@@ -60,7 +63,7 @@ export async function loadSeating(db: SupabaseClient, weddingId: string, eventId
     layout
       ? db.from("layout_items").select("id, kind, shape, label, seats, x, y, w, h, rotation, sort").eq("layout_id", layout.id).order("sort")
       : Promise.resolve({ data: [] }),
-    db.from("seat_assignments").select("guest_id, table_id, locked").eq("event_id", eventId),
+    db.from("seat_assignments").select("guest_id, table_id, seat_index, locked").eq("event_id", eventId),
     db.from("seating_rules").select("id, kind, guest_ids, table_id, event_id").eq("wedding_id", weddingId),
   ]);
 
@@ -69,8 +72,10 @@ export async function loadSeating(db: SupabaseClient, weddingId: string, eventId
   const guests: SeatingGuest[] = [];
   for (const h of book.households) {
     for (const g of h.guests) {
-      const attending = guestStatus(h, g, eventId) === "yes";
-      if (!attending && !assigned.has(g.id)) continue;
+      // Sedí-li u stolu host, jehož domácnost už na událost pozvaná není, bereme ho jako odmítnutého.
+      const status = guestStatus(h, g, eventId) ?? (assigned.has(g.id) ? "no" : null);
+      if (!status) continue;
+      if (status === "no" && !assigned.has(g.id)) continue;
       guests.push({
         id: g.id,
         name: guestName(g),
@@ -81,7 +86,8 @@ export async function loadSeating(db: SupabaseClient, weddingId: string, eventId
         diet: g.diet,
         allergies: g.allergies,
         high_chair: g.needs_high_chair,
-        attending,
+        status,
+        attending: status === "yes",
       });
     }
   }

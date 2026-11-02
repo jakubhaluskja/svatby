@@ -206,3 +206,38 @@ export function seatingWarnings(
     declined: assignments.filter((a) => !attending.has(a.guest_id)),
   };
 }
+
+/**
+ * Rozložení hostů na židle stolu. Hosté s pevnou židlí sedí na ní,
+ * ostatní (např. z automatického návrhu) obsadí první volné. Kdo se nevejde, je navíc.
+ */
+export function seatMap(seats: number, assigned: { guest_id: string; seat_index: number | null }[]): { chairs: (string | null)[]; overflow: string[] } {
+  const chairs: (string | null)[] = Array.from({ length: seats }, () => null);
+  const overflow: string[] = [];
+  const floating: string[] = [];
+  for (const a of assigned) {
+    if (a.seat_index !== null && a.seat_index >= 0 && a.seat_index < seats && chairs[a.seat_index] === null) chairs[a.seat_index] = a.guest_id;
+    else floating.push(a.guest_id);
+  }
+  for (const id of floating) {
+    const free = chairs.indexOf(null);
+    if (free === -1) overflow.push(id);
+    else chairs[free] = id;
+  }
+  return { chairs, overflow };
+}
+
+/** Volné židle pro nové hosty (nejnižší čísla). Když místa dojdou, dostanou null. */
+export function freeSeatIndexes(seats: number, taken: (number | null)[], count: number): (number | null)[] {
+  const used = new Set(taken.filter((i): i is number => i !== null));
+  const out: (number | null)[] = [];
+  for (let i = 0; i < seats && out.length < count; i++) if (!used.has(i)) out.push(i);
+  while (out.length < count) out.push(null);
+  return out;
+}
+
+/** Iniciály pro puntík židle: „Jan Novák“ → „JN“. */
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}

@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import type { LayoutItem, SeatingData, SeatingGuest } from "@/lib/seating-data";
 import { photoUrl } from "@/lib/media";
 import { createClient } from "@/lib/supabase/client";
-import type { Problem } from "@/lib/seating";
-import { addRule, assignGuests, autoSeat, clearSeating, deleteRule, saveLayout, setLocked, unassignGuests } from "./actions";
+import { freeSeatIndexes, initials, seatMap, type Problem } from "@/lib/seating";
+import { addRule, assignGuests, autoSeat, clearSeating, deleteRule, saveLayout, seatAt, setLocked, unassignGuests } from "./actions";
 import { DECOR_PRESETS, seatPositions, ShapeOutline, TABLE_PRESETS, type ShapeId } from "./shapes";
 
 type Assignment = SeatingData["assignments"][number];
@@ -26,6 +26,8 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
   const [tag, setTag] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [problems, setProblems] = useState<Problem[]>([]);
+  const [chair, setChair] = useState<{ tableId: string; index: number; left: number; top: number } | null>(null);
+  const wrap = useRef<HTMLDivElement>(null);
   const [pending, start] = useTransition();
   const svg = useRef<SVGSVGElement>(null);
   const drag = useRef<{ id: string; dx: number; dy: number; moved: boolean } | null>(null);
@@ -42,11 +44,13 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
     return m;
   }, [assignments]);
   const seatedIds = useMemo(() => new Set(assignments.map((a) => a.guest_id)), [assignments]);
-  const unseated = data.guests.filter((g) => g.attending && !seatedIds.has(g.id));
-  const declined = assignments.filter((a) => !guestById.get(a.guest_id)?.attending);
+  const unseated = data.guests.filter((g) => g.status !== "no" && !seatedIds.has(g.id));
+  const declined = assignments.filter((a) => guestById.get(a.guest_id)?.status === "no");
   const tables = items.filter((i) => i.kind === "table");
   const capacity = tables.reduce((n, t) => n + t.seats, 0);
   const attendingCount = data.guests.filter((g) => g.attending).length;
+  const seatedConfirmed = data.guests.filter((g) => g.attending && seatedIds.has(g.id)).length;
+  const pendingCount = data.guests.filter((g) => g.status === "pending").length;
   const selectedItem = items.find((i) => i.id === selected) ?? null;
 
   // Uložení plátna (s krátkým zpožděním při psaní)
@@ -101,12 +105,38 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
 
   function seat(tableId: string, guestIds: string[]) {
     if (!canEdit || guestIds.length === 0) return;
-    setAssignments((list) => [...list.filter((a) => !guestIds.includes(a.guest_id)), ...guestIds.map((guest_id) => ({ guest_id, table_id: tableId, locked: false }))]);
+    const table = items.find((i) => i.id === tableId);
+    const taken = assignments.filter((a) => a.table_id === tableId && !guestIds.includes(a.guest_id)).map((a) => a.seat_index);
+    const indexes = freeSeatIndexes(table?.seats ?? 0, taken, guestIds.length);
+    setAssignments((list) => [
+      ...list.filter((a) => !guestIds.includes(a.guest_id)),
+      ...guestIds.map((guest_id, i) => ({ guest_id, table_id: tableId, seat_index: indexes[i], locked: false })),
+    ]);
     setPicked([]);
     start(async () => {
       const r = await assignGuests(eventId, tableId, guestIds);
       if (r.error) setMessage(r.error);
     });
+  }
+
+  function seatOnChair(tableId: string, index: number, guestId: string) {
+    setAssignments((list) => [
+      ...list.filter((a) => a.guest_id !== guestId && !(a.table_id === tableId && a.seat_index === index)),
+      { guest_id: guestId, table_id: tableId, seat_index: index, locked: false },
+    ]);
+    setChair(null);
+    start(async () => {
+      const r = await seatAt(eventId, tableId, index, guestId);
+      if (r.error) setMessage(r.error);
+    });
+  }
+
+  function openChair(e: React.MouseEvent | React.KeyboardEvent, tableId: string, index: number) {
+    e.stopPropagation();
+    const box = wrap.current!.getBoundingClientRect();
+    const target = (e.currentTarget as Element).getBoundingClientRect();
+    setSelected(null);
+    setChair({ tableId, index, left: target.left + target.width / 2 - box.left, top: target.bottom - box.top + 8 });
   }
 
   function unseat(guestIds: string[]) {
@@ -238,7 +268,11 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
                   if (r.error) setMessage(r.error);
                   else {
                     setProblems(r.problems ?? []);
-                    setMessage(r.unseated ? `Posazeno ${r.seated} hostů, ${r.unseated} se nevešlo.` : `Návrh hotový: posazeno ${r.seated} hostů. Upravte ho podle sebe.`);
+                    setMessage(
+                      r.unseated
+                        ? `Posazeno ${r.seated} hostů, ${r.unseated} potvrzených se nevešlo.`
+                        : `Návrh hotový: posazeno ${r.seated} hostů${r.pendingUnseated ? `, ${r.pendingUnseated} bez odpovědi zatím nemá místo` : ""}. Upravte ho podle sebe.`,
+                    );
                   }
                 })
               }
@@ -254,7 +288,8 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
           Tisk a seznamy
         </a>
         <span className="ml-auto text-sm text-ink-soft tabular-nums">
-          Posazeno {attendingCount - unseated.length} z {attendingCount}, míst {capacity}
+          Potvrzení: posazeno {seatedConfirmed} z {attendingCount}
+          {pendingCount ? `, bez odpovědi ${pendingCount}` : ""}, míst {capacity}
         </span>
       </div>
 
@@ -275,14 +310,17 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         {/* Plátno */}
-        <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+        <div ref={wrap} className="relative overflow-hidden rounded-2xl border border-line bg-surface">
           <svg
             ref={svg}
             viewBox={`0 0 ${data.layout.width} ${data.layout.height}`}
             className="block h-auto w-full touch-none select-none"
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            onPointerDown={() => setSelected(null)}
+            onPointerDown={() => {
+              setSelected(null);
+              setChair(null);
+            }}
             role="application"
             aria-label="Plán sálu. Stoly přesunete tažením nebo šipkami."
           >
@@ -299,6 +337,7 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
               const over = item.kind === "table" && seatedHere.length > item.seats;
               const isSel = item.id === selected;
               const seats = item.kind === "table" ? seatPositions(item.shape as ShapeId, item.w, item.h, item.seats) : [];
+              const { chairs } = seatMap(item.kind === "table" ? item.seats : 0, seatedHere);
               const target = item.kind === "table" && picked.length > 0;
               return (
                 <g
@@ -317,9 +356,47 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
                   aria-label={item.kind === "table" ? `${item.label}, ${seatedHere.length} z ${item.seats} míst` : item.label ?? "prvek"}
                   className={`outline-none ${canEdit ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
                 >
-                  {seats.map((p, i) => (
-                    <circle key={i} cx={p.x} cy={p.y} r={10} fill={i < seatedHere.length ? "#4f7263" : "#ffffff"} stroke={i < seatedHere.length ? "#3c5a4d" : "#b9c6bf"} strokeWidth={2} />
-                  ))}
+                  {seats.map((p, i) => {
+                    const guestId = chairs[i];
+                    const g = guestId ? guestById.get(guestId) : null;
+                    const open = chair?.tableId === item.id && chair.index === i;
+                    const fill = !g ? "#ffffff" : g.status === "yes" ? "#4f7263" : g.status === "pending" ? "#dfe9e3" : "#f3e3ea";
+                    return (
+                      <g
+                        key={i}
+                        transform={`translate(${p.x} ${p.y})`}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => openChair(e, item.id, i)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openChair(e, item.id, i);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={g ? `Židle ${i + 1}: ${g.name}` : `Židle ${i + 1}: volná`}
+                        className="cursor-pointer outline-none [&:focus-visible>circle]:stroke-[5]"
+                      >
+                        <circle
+                          r={28}
+                          fill={fill}
+                          stroke={open ? "#1e2b26" : g ? (g.status === "no" ? "#7b3f5c" : "#3c5a4d") : "#9fb1a8"}
+                          strokeWidth={open ? 4 : 2}
+                          strokeDasharray={g?.status === "pending" ? "4 3" : undefined}
+                        />
+                        <g transform={`rotate(${-item.rotation})`}>
+                          {g ? (
+                            <text textAnchor="middle" dy={7} fontSize={20} fontWeight={600} fill={g.status === "yes" ? "#ffffff" : "#1e2b26"} pointerEvents="none">
+                              {initials(g.name)}
+                            </text>
+                          ) : (
+                            <text textAnchor="middle" dy={9} fontSize={26} fill="#9fb1a8" pointerEvents="none">+</text>
+                          )}
+                        </g>
+                      </g>
+                    );
+                  })}
                   <ShapeOutline
                     shape={item.shape as ShapeId}
                     w={item.w}
@@ -351,6 +428,29 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
               </text>
             ) : null}
           </svg>
+          {chair ? (
+            <ChairPopover
+              key={`${chair.tableId}-${chair.index}`}
+              left={chair.left}
+              top={chair.top}
+              tableLabel={items.find((i) => i.id === chair.tableId)?.label ?? "Stůl"}
+              index={chair.index}
+              occupant={(() => {
+                const t = items.find((i) => i.id === chair.tableId);
+                const id = t ? seatMap(t.seats, byTable.get(t.id) ?? []).chairs[chair.index] : null;
+                return id ? guestById.get(id) ?? null : null;
+              })()}
+              candidates={data.guests.filter((g) => g.status !== "no")}
+              seatedIds={seatedIds}
+              canEdit={canEdit}
+              onSeat={(guestId) => seatOnChair(chair.tableId, chair.index, guestId)}
+              onFree={(guestId) => {
+                unseat([guestId]);
+                setChair(null);
+              }}
+              onClose={() => setChair(null)}
+            />
+          ) : null}
         </div>
 
         {/* Panel */}
@@ -444,7 +544,7 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
 }
 
 function GuestMeta({ guest }: { guest: SeatingGuest }) {
-  const meta = [guest.category && guest.category !== "Dospělý" ? guest.category : null, guest.diet, guest.allergies ? `alergie: ${guest.allergies}` : null, guest.high_chair ? "židlička" : null, ...guest.tags].filter(Boolean);
+  const meta = [guest.status === "pending" ? "čeká na odpověď" : null, guest.category && guest.category !== "Dospělý" ? guest.category : null, guest.diet, guest.allergies ? `alergie: ${guest.allergies}` : null, guest.high_chair ? "židlička" : null, ...guest.tags].filter(Boolean);
   return meta.length ? <p className="px-2 text-xs text-ink-soft">{meta.join(", ")}</p> : null;
 }
 
@@ -538,7 +638,7 @@ function ItemPanel({
               <li key={a.guest_id} className="flex items-center gap-2 py-2 text-sm">
                 <span className="flex-1">
                   {a.guest?.name ?? "Host"}
-                  {a.guest && !a.guest.attending ? <span className="text-plum">, odmítl účast</span> : null}
+                  {a.guest?.status === "no" ? <span className="text-plum">, odmítl účast</span> : a.guest?.status === "pending" ? <span className="text-ink-soft">, čeká na odpověď</span> : null}
                   {a.guest?.diet || a.guest?.allergies ? <span className="block text-xs text-ink-soft">{[a.guest.diet, a.guest.allergies].filter(Boolean).join(", ")}</span> : null}
                 </span>
                 {canEdit ? (
@@ -574,7 +674,7 @@ function RulesPanel({ data, tables, canEdit, eventId }: { data: SeatingData; tab
   const name = new Map(data.guests.map((g) => [g.id, g.name]));
   const tableName = new Map(tables.map((t) => [t.id, t.label ?? "stůl"]));
   const label = { together: "Sedí spolu", apart: "Nesedí spolu", fixed_table: "Pevný stůl" };
-  const filtered = data.guests.filter((g) => g.attending && (!search || g.name.toLowerCase().includes(search.toLowerCase())));
+  const filtered = data.guests.filter((g) => g.status !== "no" && (!search || g.name.toLowerCase().includes(search.toLowerCase())));
 
   return (
     <div className="flex min-h-0 flex-col gap-3">
@@ -640,6 +740,138 @@ function RulesPanel({ data, tables, canEdit, eventId }: { data: SeatingData; tab
           </button>
         </form>
       ) : null}
+    </div>
+  );
+}
+
+function ChairPopover({
+  left,
+  top,
+  tableLabel,
+  index,
+  occupant,
+  candidates,
+  seatedIds,
+  canEdit,
+  onSeat,
+  onFree,
+  onClose,
+}: {
+  left: number;
+  top: number;
+  tableLabel: string;
+  index: number;
+  occupant: SeatingGuest | null;
+  candidates: SeatingGuest[];
+  seatedIds: Set<string>;
+  canEdit: boolean;
+  onSeat: (guestId: string) => void;
+  onFree: (guestId: string) => void;
+  onClose: () => void;
+}) {
+  const [choosing, setChoosing] = useState(!occupant);
+  const [query, setQuery] = useState("");
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Okno se nesmí vysunout z plátna
+  const [pos, setPos] = useState({ left, top });
+  useEffect(() => {
+    const el = box.current;
+    const parent = el?.parentElement;
+    if (!el || !parent) return;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    const maxLeft = parent.clientWidth - w / 2 - 8;
+    const nextLeft = Math.max(w / 2 + 8, Math.min(left, maxLeft));
+    const nextTop = top + h > parent.clientHeight - 8 ? Math.max(8, top - h - 56) : top;
+    setPos({ left: nextLeft, top: nextTop });
+  }, [left, top, choosing]);
+
+  const needle = query.trim().toLowerCase();
+  const match = (g: SeatingGuest) => !needle || g.name.toLowerCase().includes(needle) || g.household.toLowerCase().includes(needle);
+  const free = candidates.filter((g) => !seatedIds.has(g.id) && match(g)).sort((a, b) => Number(b.status === "yes") - Number(a.status === "yes"));
+  const elsewhere = candidates.filter((g) => seatedIds.has(g.id) && g.id !== occupant?.id && match(g));
+
+  const status = (g: SeatingGuest) => (g.status === "pending" ? "čeká na odpověď" : g.status === "no" ? "odmítl účast" : null);
+
+  return (
+    <div
+      ref={box}
+      role="dialog"
+      aria-label={`${tableLabel}, židle ${index + 1}`}
+      onPointerDown={(e) => e.stopPropagation()}
+      style={{ left: pos.left, top: pos.top }}
+      className="absolute z-30 flex w-72 -translate-x-1/2 flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-[0_16px_40px_-12px_rgba(30,43,38,0.35)]"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-medium">
+          {tableLabel}, židle {index + 1}
+        </h3>
+        <button type="button" onClick={onClose} aria-label="Zavřít" className="size-8 rounded-full text-lg text-ink-soft hover:bg-paper hover:text-ink">
+          ×
+        </button>
+      </div>
+
+      {occupant ? (
+        <div className="flex flex-col gap-2 rounded-xl bg-paper px-3 py-2.5">
+          <span className="font-medium">{occupant.name}</span>
+          <span className="text-sm text-ink-soft">
+            {[occupant.household !== occupant.name ? occupant.household : null, status(occupant), occupant.diet, occupant.allergies ? `alergie: ${occupant.allergies}` : null]
+              .filter(Boolean)
+              .join(", ") || "Potvrdil účast"}
+          </span>
+          {canEdit && !choosing ? (
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setChoosing(true)} className="h-9 flex-1 rounded-full bg-eucalyptus text-sm font-medium text-white hover:bg-eucalyptus-deep">
+                Vyměnit hosta
+              </button>
+              <button type="button" onClick={() => onFree(occupant.id)} className="h-9 flex-1 rounded-full border border-line text-sm font-medium hover:border-danger hover:text-danger">
+                Uvolnit místo
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {canEdit && choosing ? (
+        <div className="flex min-h-0 flex-col gap-2">
+          <input
+            autoFocus
+            type="search"
+            placeholder="Najít hosta"
+            aria-label="Najít hosta"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-10 rounded-lg border border-line bg-surface px-3 text-[15px] focus:border-eucalyptus focus:outline-none"
+          />
+          <ul className="flex max-h-64 flex-col overflow-y-auto">
+            {free.map((g) => (
+              <li key={g.id}>
+                <button type="button" onClick={() => onSeat(g.id)} className="flex w-full flex-col rounded-lg px-2.5 py-2 text-left hover:bg-eucalyptus-mist">
+                  <span className="text-[15px]">{g.name}</span>
+                  <span className="text-xs text-ink-soft">{[g.household !== g.name ? g.household : null, status(g)].filter(Boolean).join(", ")}</span>
+                </button>
+              </li>
+            ))}
+            {elsewhere.length ? <li className="px-2.5 pb-1 pt-3 text-xs text-ink-soft">Už sedí jinde, přesadit sem</li> : null}
+            {elsewhere.map((g) => (
+              <li key={g.id}>
+                <button type="button" onClick={() => onSeat(g.id)} className="flex w-full flex-col rounded-lg px-2.5 py-2 text-left text-ink-soft hover:bg-eucalyptus-mist hover:text-ink">
+                  <span className="text-[15px]">{g.name}</span>
+                </button>
+              </li>
+            ))}
+            {free.length === 0 && elsewhere.length === 0 ? <li className="px-2.5 py-2 text-sm text-ink-soft">Nikdo neodpovídá hledání.</li> : null}
+          </ul>
+        </div>
+      ) : null}
+      {!canEdit && !occupant ? <p className="text-sm text-ink-soft">Židle je volná.</p> : null}
     </div>
   );
 }

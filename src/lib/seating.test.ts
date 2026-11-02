@@ -86,3 +86,29 @@ describe("seatingWarnings", () => {
     expect(w.declined).toEqual([{ guest_id: "2", table_id: "A" }]);
   });
 });
+
+import { freeSeatIndexes, initials, seatMap } from "./seating";
+
+describe("židle", () => {
+  it("pevné židle drží, ostatní doplní volná místa, zbytek je navíc", () => {
+    const m = seatMap(3, [
+      { guest_id: "a", seat_index: 2 },
+      { guest_id: "b", seat_index: null },
+      { guest_id: "c", seat_index: 2 },
+      { guest_id: "d", seat_index: null },
+      { guest_id: "e", seat_index: null },
+    ]);
+    expect(m.chairs).toEqual(["b", "c", "a"]);
+    expect(m.overflow).toEqual(["d", "e"]);
+  });
+
+  it("najde volné židle", () => {
+    expect(freeSeatIndexes(4, [0, 2, null], 3)).toEqual([1, 3, null]);
+  });
+
+  it("iniciály", () => {
+    expect(initials("Jan Novák")).toBe("JN");
+    expect(initials("Marie Anna Svobodová")).toBe("MS");
+    expect(initials("Ema")).toBe("E");
+  });
+});

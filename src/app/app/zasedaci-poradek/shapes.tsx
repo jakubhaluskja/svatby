@@ -3,10 +3,10 @@
 export type ShapeId = "round" | "rect" | "oval" | "head" | "t" | "u" | "banquet" | "dancefloor" | "bar" | "stage" | "dj" | "entrance";
 
 export const TABLE_PRESETS: { shape: ShapeId; label: string; seats: number; w: number; h: number }[] = [
-  { shape: "round", label: "Kulatý", seats: 8, w: 130, h: 130 },
-  { shape: "rect", label: "Obdélníkový", seats: 6, w: 180, h: 80 },
+  { shape: "round", label: "Kulatý", seats: 8, w: 150, h: 150 },
+  { shape: "rect", label: "Obdélníkový", seats: 6, w: 220, h: 90 },
   { shape: "oval", label: "Oválný", seats: 10, w: 220, h: 120 },
-  { shape: "head", label: "Hlavní", seats: 6, w: 300, h: 70 },
+  { shape: "head", label: "Hlavní", seats: 6, w: 400, h: 80 },
   { shape: "banquet", label: "Banket", seats: 16, w: 520, h: 80 },
   { shape: "t", label: "Tvar T", seats: 14, w: 360, h: 300 },
   { shape: "u", label: "Tvar U", seats: 20, w: 420, h: 320 },
@@ -37,10 +37,10 @@ function distribute(sides: [Pt, Pt][], seats: number): Pt[] {
   return sides.flatMap(([a, b], i) => alongLine(a, b, counts[i]));
 }
 
-/** Pozice židlí kolem stolu. Židle stojí 16 px od hrany. */
+/** Pozice židlí kolem stolu. Střed židle je 42 px od hrany stolu. */
 export function seatPositions(shape: ShapeId, w: number, h: number, seats: number): Pt[] {
   if (seats <= 0) return [];
-  const o = 16;
+  const o = 42;
   const hw = w / 2;
   const hh = h / 2;
   switch (shape) {

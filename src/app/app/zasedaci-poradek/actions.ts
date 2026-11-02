@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { loadSeating } from "@/lib/seating-data";
-import { suggestSeating, type Problem } from "@/lib/seating";
+import { freeSeatIndexes, suggestSeating, type Problem } from "@/lib/seating";
 import { createClient } from "@/lib/supabase/server";
 import { requireWedding } from "@/lib/wedding";
 
@@ -43,15 +43,37 @@ export async function saveLayout(eventId: string, items: unknown[], background?:
   return {};
 }
 
+/** Posadí hosty ke stolu na první volné židle (přetažení, celá domácnost). */
 export async function assignGuests(eventId: string, tableId: string, guestIds: string[]): Promise<{ error?: string }> {
   const wedding = await requireWedding();
   const ids = z.array(uuid).max(50).parse(guestIds);
   const supabase = await createClient();
+  const [{ data: table }, { data: current }] = await Promise.all([
+    supabase.from("layout_items").select("seats").eq("id", tableId).single(),
+    supabase.from("seat_assignments").select("guest_id, seat_index").eq("table_id", tableId),
+  ]);
+  const taken = (current ?? []).filter((a) => !ids.includes(a.guest_id)).map((a) => a.seat_index);
+  const indexes = freeSeatIndexes(table?.seats ?? 0, taken, ids.length);
   const { error } = await supabase.from("seat_assignments").upsert(
-    ids.map((guest_id) => ({ guest_id, event_id: eventId, wedding_id: wedding.id, table_id: tableId, seat_index: null })),
+    ids.map((guest_id, i) => ({ guest_id, event_id: eventId, wedding_id: wedding.id, table_id: tableId, seat_index: indexes[i] })),
     { onConflict: "guest_id,event_id" },
   );
   if (error) return { error: "Hosty se nepodařilo posadit." };
+  revalidatePath("/app/zasedaci-poradek");
+  return {};
+}
+
+/** Posadí hosta na konkrétní židli. Kdo na ní seděl, uvolní místo. */
+export async function seatAt(eventId: string, tableId: string, seatIndex: number, guestId: string): Promise<{ error?: string }> {
+  const wedding = await requireWedding();
+  const idx = z.number().int().min(0).max(199).parse(seatIndex);
+  const supabase = await createClient();
+  await supabase.from("seat_assignments").delete().eq("table_id", uuid.parse(tableId)).eq("seat_index", idx).neq("guest_id", uuid.parse(guestId));
+  const { error } = await supabase.from("seat_assignments").upsert(
+    { guest_id: guestId, event_id: eventId, wedding_id: wedding.id, table_id: tableId, seat_index: idx },
+    { onConflict: "guest_id,event_id" },
+  );
+  if (error) return { error: "Hosta se nepodařilo posadit." };
   revalidatePath("/app/zasedaci-poradek");
   return {};
 }
@@ -103,37 +125,59 @@ export async function deleteRule(ruleId: string) {
   revalidatePath("/app/zasedaci-poradek");
 }
 
-/** Automatický návrh: zamčení hosté zůstávají, ostatní se rozsadí znovu. */
-export async function autoSeat(eventId: string): Promise<{ error?: string; problems?: Problem[]; seated?: number; unseated?: number }> {
+/**
+ * Automatický návrh: zamčení hosté zůstávají, ostatní se rozsadí znovu.
+ * Nejdřív potvrzení hosté, do zbylých míst ti, kdo ještě neodpověděli.
+ */
+export async function autoSeat(eventId: string): Promise<{ error?: string; problems?: Problem[]; seated?: number; unseated?: number; pendingUnseated?: number }> {
   const wedding = await requireWedding();
   const supabase = await createClient();
   const data = await loadSeating(supabase, wedding.id, eventId);
   if (!data) return { error: "Událost nebyla nalezena." };
 
-  const tables = data.items.filter((i) => i.kind === "table" && i.seats > 0).map((i) => ({ id: i.id, label: i.label ?? "stůl", seats: i.seats }));
+  const tableItems = data.items.filter((i) => i.kind === "table" && i.seats > 0);
+  const tables = tableItems.map((i) => ({ id: i.id, label: i.label ?? "stůl", seats: i.seats }));
   if (tables.length === 0) return { error: "Nejdřív přidejte stoly." };
 
-  const attending = data.guests.filter((g) => g.attending);
-  const locked = data.assignments.filter((a) => a.locked && attending.some((g) => g.id === a.guest_id));
-  const result = suggestSeating({
+  const rules = data.rules.map((r) =>
+    r.kind === "fixed_table" ? { kind: r.kind, guest_ids: r.guest_ids, table_id: r.table_id! } : { kind: r.kind, guest_ids: r.guest_ids },
+  );
+  const toSeatGuest = (g: (typeof data.guests)[number]) => ({ id: g.id, name: g.name, household_id: g.household_id, tags: g.tags });
+  const confirmed = data.guests.filter((g) => g.status === "yes");
+  const pending = data.guests.filter((g) => g.status === "pending");
+  const seatable = new Set([...confirmed, ...pending].map((g) => g.id));
+  const locked = data.assignments.filter((a) => a.locked && seatable.has(a.guest_id));
+
+  // 1. potvrzení
+  const first = suggestSeating({ tables, guests: confirmed.map(toSeatGuest), rules, locked: locked.map((a) => ({ guest_id: a.guest_id, table_id: a.table_id })) });
+  // 2. bez odpovědi do zbylých míst (potvrzení jsou už „zamčení“)
+  const second = suggestSeating({
     tables,
-    guests: attending.map((g) => ({ id: g.id, name: g.name, household_id: g.household_id, tags: g.tags })),
-    rules: data.rules.map((r) => (r.kind === "fixed_table" ? { kind: r.kind, guest_ids: r.guest_ids, table_id: r.table_id! } : { kind: r.kind, guest_ids: r.guest_ids })),
-    locked: locked.map((a) => ({ guest_id: a.guest_id, table_id: a.table_id })),
+    guests: [...confirmed, ...pending].map(toSeatGuest),
+    rules,
+    locked: [...first.assignments, ...locked.filter((a) => pending.some((p) => p.id === a.guest_id))].map((a) => ({ guest_id: a.guest_id, table_id: a.table_id })),
   });
 
-  // Nahradit nezamčené rozsazení návrhem
-  await supabase.from("seat_assignments").delete().eq("event_id", eventId).eq("locked", false);
+  // Čísla židlí: zamčení si nechají svou, ostatní dostanou volné
   const lockedIds = new Set(locked.map((a) => a.guest_id));
-  const rows = result.assignments
-    .filter((a) => !lockedIds.has(a.guest_id))
-    .map((a) => ({ guest_id: a.guest_id, table_id: a.table_id, event_id: eventId, wedding_id: wedding.id, locked: false }));
+  const rows: { guest_id: string; table_id: string; seat_index: number | null; event_id: string; wedding_id: string; locked: boolean }[] = [];
+  for (const t of tableItems) {
+    const here = second.assignments.filter((a) => a.table_id === t.id && !lockedIds.has(a.guest_id)).map((a) => a.guest_id);
+    // Potvrzení první, ať při nedostatku míst zůstanou na židlích
+    here.sort((a, b) => Number(seatable.has(b) && confirmed.some((c) => c.id === b)) - Number(seatable.has(a) && confirmed.some((c) => c.id === a)));
+    const taken = locked.filter((a) => a.table_id === t.id).map((a) => a.seat_index);
+    const indexes = freeSeatIndexes(t.seats, taken, here.length);
+    here.forEach((guest_id, i) => rows.push({ guest_id, table_id: t.id, seat_index: indexes[i], event_id: eventId, wedding_id: wedding.id, locked: false }));
+  }
+
+  await supabase.from("seat_assignments").delete().eq("event_id", eventId).eq("locked", false);
   if (rows.length) {
     const { error } = await supabase.from("seat_assignments").insert(rows);
     if (error) return { error: "Návrh se nepodařilo uložit." };
   }
   revalidatePath("/app/zasedaci-poradek");
-  return { problems: result.problems, seated: result.assignments.length, unseated: result.unseated.length };
+  const pendingUnseated = pending.filter((p) => !second.assignments.some((a) => a.guest_id === p.id)).length;
+  return { problems: first.problems, seated: second.assignments.length, unseated: first.unseated.length, pendingUnseated };
 }
 
 export async function clearSeating(eventId: string) {

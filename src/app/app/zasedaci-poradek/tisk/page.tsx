@@ -53,7 +53,7 @@ export default async function SeatingPrintPage({ searchParams }: Props) {
               <g key={item.id} transform={`translate(${item.x} ${item.y}) rotate(${item.rotation})`}>
                 {item.kind === "table"
                   ? seatPositions(item.shape as ShapeId, item.w, item.h, item.seats).map((p, i) => (
-                      <circle key={i} cx={p.x} cy={p.y} r={9} fill={i < count ? "#1e2b26" : "#fff"} stroke="#1e2b26" strokeWidth={1.5} />
+                      <circle key={i} cx={p.x} cy={p.y} r={16} fill={i < count ? "#1e2b26" : "#fff"} stroke="#1e2b26" strokeWidth={1.5} />
                     ))
                   : null}
                 <ShapeOutline shape={item.shape as ShapeId} w={item.w} h={item.h} style={{ fill: "#fff", stroke: "#1e2b26", strokeWidth: 2, strokeDasharray: item.kind === "decor" ? "8 6" : undefined }} />
