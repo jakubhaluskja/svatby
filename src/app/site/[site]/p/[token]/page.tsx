@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { LanguageSwitch } from "@/components/site/language-switch";
 import { SiteSections } from "@/components/site/site-sections";
 import { SiteShell } from "@/components/site/site-shell";
-import { householdByToken, householdTables, localizeEvents, pickLocale, resolveWedding, siteContent, siteNotices } from "@/lib/site";
+import { householdByToken, householdRooms, householdTables, localizeEvents, pickLocale, resolveWedding, siteContent, siteNotices } from "@/lib/site";
 import { SiteNotices } from "@/components/site/site-notices";
 import { siteCopy } from "@/lib/site-copy";
 import { RsvpForm } from "./rsvp-form";
@@ -36,7 +36,7 @@ export default async function HouseholdSite({ params, searchParams }: Props) {
     : null;
   const invited = household.events.some((e) => e.invited);
   const events = localizeEvents(household.events, locale);
-  const tables = await householdTables(wedding, household, locale);
+  const [tables, rooms] = await Promise.all([householdTables(wedding, household, locale), householdRooms(household, locale)]);
   const notices = await siteNotices(wedding, events, locale, household.events.filter((e) => e.invited).map((e) => e.id));
 
   return (
@@ -67,6 +67,33 @@ export default async function HouseholdSite({ params, searchParams }: Props) {
           rsvp={
             invited ? (
               <div className="flex flex-col gap-8">
+                {rooms.length ? (
+                  <div className="flex flex-col gap-3 rounded-sm border px-5 py-5" style={{ borderColor: "var(--site-line)" }}>
+                    <h3 className="text-sm" style={{ color: "var(--site-muted)" }}>{copy.yourRoom}</h3>
+                    {rooms.map((r, i) => (
+                      <div key={i} className="flex flex-col gap-1">
+                        <p className="text-lg font-medium">
+                          {r.lodging}, {r.room}
+                          {rooms.length > 1 || r.guests.length < household.guests.length ? <span className="font-normal" style={{ color: "var(--site-muted)" }}> ({r.guests.join(", ")})</span> : null}
+                        </p>
+                        <p className="text-sm" style={{ color: "var(--site-muted)" }}>
+                          {[
+                            r.address,
+                            r.paid_by_couple
+                              ? copy.paidByCouple
+                              : r.price !== null
+                                ? `${new Intl.NumberFormat(locale === "cs" ? "cs-CZ" : "en-GB", { style: "currency", currency: r.currency, maximumFractionDigits: 0 }).format(r.price)} ${copy.perNight}`
+                                : null,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+                        {r.info ? <p className="whitespace-pre-line text-sm">{r.info}</p> : null}
+                        {r.url ? <a href={r.url} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-2" style={{ color: "var(--site-accent)" }}>{r.url.replace(/^https?:\/\//, "")}</a> : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="flex flex-col gap-2 text-center">
                   <p className="text-lg">
                     {copy.greeting(household.name)} {copy.invitation}

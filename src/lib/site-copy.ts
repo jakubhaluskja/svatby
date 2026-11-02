@@ -47,6 +47,9 @@ export const SITE_COPY = {
     tooManyPlusOnes: "Přidali jste víc doprovodů, než je v pozvání.",
     notFound: "Tenhle odkaz nefunguje. Možná vám novomanželé poslali nový.",
     yourTable: "Kde sedíte",
+    yourRoom: "Vaše ubytování",
+    perNight: "za noc",
+    paidByCouple: "hradí novomanželé",
   },
   en: {
     preview: "Preview. Guests will see the website once it is published.",
@@ -93,6 +96,9 @@ export const SITE_COPY = {
     tooManyPlusOnes: "You have added more plus ones than the invitation allows.",
     notFound: "This link doesn't work. The couple may have sent you a new one.",
     yourTable: "Your table",
+    yourRoom: "Your accommodation",
+    perNight: "per night",
+    paidByCouple: "covered by the couple",
   },
 } satisfies Record<Locale, Record<string, unknown>>;
 

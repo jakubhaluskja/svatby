@@ -355,3 +355,57 @@ export async function householdTables(wedding: PublicWedding, household: GuestHo
     table: ((row.layout_items as unknown as { label: string | null } | null)?.label ?? "").trim(),
   }));
 }
+
+export type GuestRoom = {
+  lodging: string;
+  address: string | null;
+  url: string | null;
+  info: string;
+  room: string;
+  price: number | null;
+  currency: string;
+  paid_by_couple: boolean;
+  guests: string[];
+};
+
+/** Pokoje, ve kterých jsou ubytovaní členové domácnosti. */
+export async function householdRooms(household: GuestHousehold, locale: Locale): Promise<GuestRoom[]> {
+  if (household.guests.length === 0) return [];
+  const db = createAdminClient();
+  const { data } = await db
+    .from("room_assignments")
+    .select("guest_id, rooms(id, name, price, currency, paid_by, lodgings(name, address, url, check_in_info))")
+    .in("guest_id", household.guests.map((g) => g.id));
+
+  type Row = {
+    guest_id: string;
+    rooms: {
+      id: string;
+      name: string;
+      price: number | null;
+      currency: string;
+      paid_by: string;
+      lodgings: { name: string; address: string | null; url: string | null; check_in_info: unknown } | null;
+    } | null;
+  };
+  const byRoom = new Map<string, GuestRoom>();
+  const firstName = new Map(household.guests.map((g) => [g.id, g.first_name]));
+  for (const row of (data ?? []) as unknown as Row[]) {
+    const r = row.rooms;
+    if (!r || !r.lodgings) continue;
+    const entry = byRoom.get(r.id) ?? {
+      lodging: r.lodgings.name,
+      address: r.lodgings.address,
+      url: r.lodgings.url,
+      info: tr(r.lodgings.check_in_info, locale),
+      room: r.name,
+      price: r.price,
+      currency: r.currency,
+      paid_by_couple: r.paid_by === "couple",
+      guests: [],
+    };
+    entry.guests.push(firstName.get(row.guest_id) ?? "");
+    byRoom.set(r.id, entry);
+  }
+  return [...byRoom.values()];
+}
