@@ -7,6 +7,8 @@ const ITEMS = [
   { href: "/app", label: "Přehled", exact: true },
   { href: "/app/hoste", label: "Hosté" },
   { href: "/app/udalosti", label: "Události" },
+  { href: "/app/checklist", label: "Checklist" },
+  { href: "/app/harmonogram", label: "Harmonogram" },
   { href: "/app/zasedaci-poradek", label: "Zasedací pořádek" },
   { href: "/app/ubytovani", label: "Ubytování" },
   { href: "/app/web", label: "Web" },

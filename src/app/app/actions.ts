@@ -14,4 +14,5 @@ export async function toggleTask(taskId: string, done: boolean) {
     .eq("id", id);
   if (error) throw new Error("Úkol se nepodařilo uložit.");
   revalidatePath("/app");
+  revalidatePath("/app/checklist");
 }
