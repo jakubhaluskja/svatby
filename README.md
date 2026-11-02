@@ -36,7 +36,7 @@ Lokálně funguje `http://jana-a-petr.localhost:3000`.
 - **Administrace páru** používá `src/lib/supabase/server.ts` jménem přihlášeného uživatele. Přístup hlídá
   RLS v databázi (`app.module_level`): vlastník a partner/ka mají plná práva, spoluorganizátor má u každého
   modulu `none / read / write`, u rozpočtu i `own` (jen část svého přispěvatele).
-- **Hosté nemají účet.** Veřejný web, RSVP a nahrávání fotek jdou přes server s `service_role`
+- **Hosté nemají účet.** Veřejný web, RSVP a nahrávání fotek jdou přes server s tajným klíčem (secret key)
   (`src/lib/supabase/admin.ts`) a ověření tokenu (domácnost, galerie, sdílený harmonogram).
   Anonymní klient nemá k tabulkám žádný přístup.
 - Citlivé operace jsou databázové funkce volatelné jen serverem: `submit_household_rsvp`, `apply_paid_order`.

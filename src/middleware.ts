@@ -32,10 +32,10 @@ export async function middleware(request: NextRequest) {
 async function refreshSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !anonKey) return response;
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !publishableKey) return response;
 
-  const supabase = createServerClient(supabaseUrl, anonKey, {
+  const supabase = createServerClient(supabaseUrl, publishableKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();

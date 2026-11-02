@@ -24,7 +24,7 @@ export function isCustomDomainParam(site: string): boolean {
 
 /**
  * Najde zveřejněnou svatbu podle slugu nebo ověřené vlastní domény.
- * Čte přes service_role, proto vrací jen veřejně bezpečná pole.
+ * Čte s tajným klíčem, proto vrací jen veřejně bezpečná pole.
  */
 export const resolveWedding = cache(async (siteParam: string): Promise<PublicWedding | null> => {
   const site = decodeURIComponent(siteParam).toLowerCase();
