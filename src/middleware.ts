@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { parseHost } from "@/lib/hosts";
+import { parseHost, usesPathSites } from "@/lib/hosts";
 import { appDomain } from "@/lib/env";
 
 /**
@@ -20,8 +20,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // Interní cesta /site/* není na doméně aplikace přímo dostupná (kromě vývoje).
-  if (url.pathname.startsWith("/site/") && process.env.NODE_ENV === "production") {
+  // Interní cesta /site/* je přímo dostupná jen tam, kde nejsou subdomény (Vercel náhled, vývoj).
+  if (url.pathname.startsWith("/site/") && !usesPathSites(appDomain()) && process.env.NODE_ENV === "production") {
     url.pathname = "/404";
     return NextResponse.rewrite(url);
   }

@@ -172,5 +172,42 @@ const n1 = (await q(`select app.next_invoice_number() n`))[0].n;
 const n2 = (await q(`select app.next_invoice_number() n`))[0].n;
 check('číselná řada faktur', /^\d{8}$/.test(n1) && Number(n2) === Number(n1) + 1, `${n1}, ${n2}`);
 
+
+// --- správa domácnosti párem
+await as('authenticated', owner.id);
+const cats = await q(`select id from age_categories where wedding_id=$1 order by sort`, [wid]);
+const [{ save_household: hid2 }] = await q(`select save_household($1, $2::jsonb)`, [wid, JSON.stringify({
+  name: 'Dvořákovi', locale: 'en', plus_ones_allowed: 1, event_ids: [ev1.id, ev2.id],
+  guests: [
+    { first_name: 'Pavel', last_name: 'Dvořák', age_category_id: cats[0].id, tags: ['Kolegové', 'Rodina'] },
+    { first_name: 'Ema', age_category_id: cats[2].id, needs_high_chair: true, tags: ['Rodina'] },
+  ],
+})]);
+check('domácnost uložena', !!hid2);
+check('hosté uloženi', (await q(`select count(*)::int c from guests where household_id=$1`, [hid2]))[0].c === 2);
+check('štítky vytvořeny jednou', (await q(`select count(*)::int c from tags where wedding_id=$1`, [wid]))[0].c === 2);
+check('pozvání na 2 události', (await q(`select count(*)::int c from household_events where household_id=$1`, [hid2]))[0].c === 2);
+const [pavel] = await q(`select id from guests where household_id=$1 and first_name='Pavel'`, [hid2]);
+await q(`select save_household($1, $2::jsonb)`, [wid, JSON.stringify({
+  id: hid2, name: 'Dvořákovi', event_ids: [ev1.id],
+  guests: [{ id: pavel.id, first_name: 'Pavel', last_name: 'Dvořák', tags: [] }],
+})]);
+check('odebraný host smazán', (await q(`select count(*)::int c from guests where household_id=$1`, [hid2]))[0].c === 1);
+check('odebraná událost', (await q(`select count(*)::int c from household_events where household_id=$1`, [hid2]))[0].c === 1);
+await expectError('cizí host v domácnosti odmítnut', () => q(`select save_household($1, $2::jsonb)`, [wid, JSON.stringify({
+  id: hid2, name: 'X', guests: [{ id: g1.id, first_name: 'Jan' }] })]), 'guest_not_in_household');
+
+const [old] = await q(`select token from households where id=$1`, [hid2]);
+const [fresh] = await q(`select * from regenerate_household_link($1)`, [hid2]);
+check('nový osobní odkaz', fresh.new_token !== old.token && /^[A-HJ-NP-Z2-9]{6}$/.test(fresh.new_short_code));
+await q(`insert into rsvp_log (wedding_id, household_id, actor_kind, actor_user_id, payload) values ($1,$2,'member',$3,'{}')`, [wid, hid2, owner.id]);
+check('pár zapisuje historii RSVP', true);
+
+await as('authenticated', coorg.id);
+await expectError('spoluorganizátor bez zápisu nemůže ukládat', () => q(`select save_household($1, $2::jsonb)`, [wid, JSON.stringify({
+  name: 'X', guests: [{ first_name: 'Y' }] })]), 'forbidden');
+await expectError('spoluorganizátor nemůže přegenerovat odkaz', () => q(`select * from regenerate_household_link($1)`, [hid2]), 'forbidden');
+await expectError('nemůže zapsat historii za pár', () => q(`insert into rsvp_log (wedding_id, household_id, actor_kind, actor_user_id, payload) values ($1,$2,'member',$3,'{}')`, [wid, hid2, coorg.id]), 'row-level security');
+
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);

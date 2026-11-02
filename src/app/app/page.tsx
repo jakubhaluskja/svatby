@@ -66,6 +66,22 @@ export default async function DashboardPage({ searchParams }: Props) {
         <Stat label="Hosté" value={`${guestCount ?? 0} v ${householdCount ?? 0} domácnostech`} />
       </dl>
 
+      {(householdCount ?? 0) === 0 ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-2xl font-semibold tracking-tight">Začněte tady</h2>
+          <ol className="flex flex-col gap-2 text-[15px]">
+            <li>
+              1. <Link href="/app/udalosti" className="font-medium underline underline-offset-2">Doplňte události</Link>
+              <span className="text-ink-soft">: obřad, hostinu, večerní zábavu. Hosté u nich potvrdí účast.</span>
+            </li>
+            <li>
+              2. <Link href="/app/hoste" className="font-medium underline underline-offset-2">Přidejte hosty</Link>
+              <span className="text-ink-soft">, ručně nebo vložením z Excelu. Každá domácnost dostane osobní odkaz.</span>
+            </li>
+          </ol>
+        </section>
+      ) : null}
+
       <section className="flex flex-col gap-2">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Nejbližší úkoly</h2>
         {tasks && tasks.length > 0 ? (

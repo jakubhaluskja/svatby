@@ -58,7 +58,22 @@ export function parseHost(rawHost: string | null | undefined, appDomain: string)
   return { kind: "custom", hostname: host };
 }
 
+/**
+ * Na doméně bez wildcard subdomén (Vercel náhled, localhost bez DNS) běží svatby
+ * na cestě /site/<slug>. Na vlastní doméně aplikace na <slug>.<doména>.
+ */
+export function usesPathSites(appDomain: string): boolean {
+  const d = appDomain.replace(/:\d+$/, "");
+  return d.endsWith(".vercel.app") || d === "localhost" || d === "127.0.0.1";
+}
+
 /** Veřejná adresa svatebního webu. */
-export function siteUrl(slug: string, appDomain: string, protocol = "https"): string {
-  return `${protocol}://${slug}.${appDomain}`;
+export function siteUrl(slug: string, appDomain: string): string {
+  const protocol = appDomain.startsWith("localhost") || appDomain.startsWith("127.") ? "http" : "https";
+  return usesPathSites(appDomain) ? `${protocol}://${appDomain}/site/${slug}` : `${protocol}://${slug}.${appDomain}`;
+}
+
+/** Osobní odkaz domácnosti na RSVP. */
+export function householdUrl(slug: string, token: string, appDomain: string): string {
+  return `${siteUrl(slug, appDomain)}/p/${token}`;
 }

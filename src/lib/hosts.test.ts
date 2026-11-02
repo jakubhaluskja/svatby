@@ -44,3 +44,13 @@ describe("isValidSlug", () => {
     expect(isValidSlug("admin")).toBe(false);
   });
 });
+
+import { householdUrl, siteUrl } from "./hosts";
+
+describe("adresy webu", () => {
+  it("subdoména na vlastní doméně, cesta na Vercelu", () => {
+    expect(siteUrl("jana", "anoberu.cz")).toBe("https://jana.anoberu.cz");
+    expect(siteUrl("jana", "svatby-abc.vercel.app")).toBe("https://svatby-abc.vercel.app/site/jana");
+    expect(householdUrl("jana", "T0K", "localhost:3000")).toBe("http://localhost:3000/site/jana/p/T0K");
+  });
+});

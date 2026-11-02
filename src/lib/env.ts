@@ -26,5 +26,10 @@ export function serverEnv() {
 
 /** Doména aplikace bez nutnosti ostatních proměnných (middleware, odkazy). */
 export function appDomain(): string {
-  return process.env.NEXT_PUBLIC_APP_DOMAIN || "localhost:3000";
+  return normalizeDomain(process.env.NEXT_PUBLIC_APP_DOMAIN) || "localhost:3000";
+}
+
+/** Odstraní protokol, cestu a lomítka, kdyby někdo zadal celou adresu. */
+export function normalizeDomain(value: string | undefined): string {
+  return (value ?? "").trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "").toLowerCase();
 }
