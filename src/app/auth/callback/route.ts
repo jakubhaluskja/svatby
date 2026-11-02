@@ -9,9 +9,13 @@ export async function GET(request: NextRequest) {
   const next = safeNext(url.searchParams.get("next"));
 
   if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next, url.origin));
+    try {
+      const supabase = await createClient();
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (!error) return NextResponse.redirect(new URL(next, url.origin));
+    } catch {
+      // chybí ověřovací cookie (odkaz otevřený v jiném prohlížeči) – pokračujeme na přihlášení
+    }
   }
   return NextResponse.redirect(new URL("/prihlaseni?chyba=odkaz", url.origin));
 }
