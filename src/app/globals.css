@@ -1,26 +1,44 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Barvy a písmo aplikace (administrace páru). Svatební web má vlastní šablony. */
+@theme {
+  --color-ink: #1e2b26;
+  --color-ink-soft: #4a5a53;
+  --color-paper: #f5f7f5;
+  --color-surface: #ffffff;
+  --color-line: #d9e1dc;
+  --color-eucalyptus: #4f7263;
+  --color-eucalyptus-deep: #3c5a4d;
+  --color-eucalyptus-mist: #e3ece7;
+  --color-plum: #7b3f5c;
+  --color-danger: #a33a2f;
+
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", var(--font-geist-sans), sans-serif;
+  --font-fraunces: "Fraunces Variable", Georgia, serif;
+  --font-cormorant: "Cormorant Garamond", Georgia, serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-eucalyptus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
