@@ -228,5 +228,13 @@ check('zveřejnění zkopíruje koncept', pub.template === 'boho' && pub.section
 await as('authenticated', coorg.id);
 await expectError('spoluorganizátor bez práv nezveřejní', () => q(`select publish_site($1)`, [wid]), 'forbidden');
 
+
+// --- zpevnění: anonym nevolá funkce pro páry
+await as('anon');
+await expectError('anonym nezaloží svatbu', () => q(`select create_wedding('anon-test', 'A', 'B', null)`), 'permission denied');
+await expectError('anonym neuloží domácnost', () => q(`select save_household($1, '{}'::jsonb)`, [wid]), 'permission denied');
+await as('authenticated', owner.id);
+check('přihlášený pár funkce volat může', (await q(`select count(*)::int c from regenerate_household_link($1)`, [hid2]))[0].c === 1);
+
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);

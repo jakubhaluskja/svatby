@@ -8,3 +8,4 @@
 - `createAdminClient` nikdy v klientských komponentách (`server-only`).
 - Lokalizované texty v DB jako `{"cs": "...", "en": "..."}`.
 - Před commitem: `npm run typecheck && npm run lint && npm test && npm run test:db && npm run build`.
+- Databáze Supabase (projekt `idunrfgroymfeusefupz`) je připojená přes konektor: migrace nahrávat nástrojem `apply_migration`, pak sjednotit verzi v `supabase_migrations.schema_migrations` s názvem souboru a spustit bezpečnostní kontrolu (`get_advisors`).
