@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requestOrigin, safeNext } from "@/lib/origin";
+import { isPwnedPassword } from "@/lib/pwned";
 
 export type AuthState = { error?: string; info?: string; fields?: Record<string, string> };
 
@@ -39,6 +40,10 @@ export async function signUp(_: AuthState, formData: FormData): Promise<AuthStat
   if (!parsed.success) return { error: parsed.error.issues[0].message, fields };
   if (formData.get("terms") !== "on") {
     return { error: "Pro registraci je potřeba souhlasit s obchodními podmínkami.", fields };
+  }
+
+  if (await isPwnedPassword(parsed.data.password)) {
+    return { error: "Tohle heslo se objevilo v únicích dat z jiných webů. Zvolte prosím jiné.", fields };
   }
 
   const supabase = await createClient();
@@ -89,6 +94,9 @@ export async function requestPasswordReset(_: AuthState, formData: FormData): Pr
 export async function updatePassword(_: AuthState, formData: FormData): Promise<AuthState> {
   const password = z.string().min(8).safeParse(formData.get("password"));
   if (!password.success) return { error: "Heslo musí mít aspoň 8 znaků." };
+  if (await isPwnedPassword(password.data)) {
+    return { error: "Tohle heslo se objevilo v únicích dat z jiných webů. Zvolte prosím jiné." };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password: password.data });
