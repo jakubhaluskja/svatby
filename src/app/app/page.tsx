@@ -2,7 +2,9 @@ import Link from "next/link";
 import { daysUntil, formatWeddingDate } from "@/components/site/site-hero";
 import { Icon, type IconName } from "@/components/icons";
 import { Card, Eyebrow, FormMessage } from "@/components/ui";
+import { appDomain } from "@/lib/env";
 import { loadGuestBook } from "@/lib/guest-data";
+import { siteUrl } from "@/lib/hosts";
 import { createClient } from "@/lib/supabase/server";
 import { utcToZonedParts } from "@/lib/time";
 import { requireUser, requireWedding } from "@/lib/wedding";
@@ -73,10 +75,10 @@ export default async function DashboardPage({ searchParams }: Props) {
             {firstName ? `, ${firstName}` : ""}
           </h1>
         </div>
-        <Link href="/app/web/nahled" className="inline-flex h-10 items-center gap-2 self-start rounded-full bg-surface px-4 text-sm font-medium ring-1 ring-line hover:ring-eucalyptus sm:self-auto">
+        <a href={siteUrl(wedding.slug, appDomain())} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 self-start rounded-full bg-surface px-4 text-sm font-medium ring-1 ring-line hover:ring-eucalyptus sm:self-auto">
           <Icon n="eye" className="size-4" />
-          Náhled webu
-        </Link>
+          {wedding.status === "published" ? "Otevřít web" : "Náhled webu"}
+        </a>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.35fr_1fr_1fr_1fr]">

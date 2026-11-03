@@ -28,16 +28,18 @@ function isFilled(s: Section): boolean {
 export default async function WebEditorPage() {
   const wedding = await requireWedding();
   const supabase = await createClient();
-  const [{ data: pages }, { data: w }, { data: planB }] = await Promise.all([
+  const [{ data: pages }, { data: w }, { data: planB }, { data: paymentsEnabled }] = await Promise.all([
     supabase.from("site_pages").select("state, sections, template, updated_at").eq("wedding_id", wedding.id),
-    supabase.from("weddings").select("locales, rsvp_deadline, status, password_scope, password_hash, protected_sections").eq("id", wedding.id).single(),
+    supabase.from("weddings").select("locales, rsvp_deadline, status, package, published_free, password_scope, password_hash, protected_sections").eq("id", wedding.id).single(),
     supabase
       .from("events")
       .select("id, name, location_name, plan_b_location_name, plan_b_address, plan_b_active")
       .eq("wedding_id", wedding.id)
       .or("plan_b_location_name.not.is.null,plan_b_address.not.is.null")
       .order("starts_at", { ascending: true, nullsFirst: false }),
+    supabase.rpc("payments_enabled"),
   ]);
+  const free = paymentsEnabled === false;
   const draft = pages?.find((p) => p.state === "draft");
   const published = pages?.find((p) => p.state === "published");
   const sections = normalizeSections(draft?.sections);
@@ -58,13 +60,23 @@ export default async function WebEditorPage() {
           </p>
         </div>
         {w?.status === "published" ? (
-          <PublishButton hasChanges={hasChanges} />
+          <PublishButton hasChanges={hasChanges} canHide={!!w.published_free && w.package === "none" && wedding.role !== "coorganizer"} />
+        ) : free && w?.status === "draft" ? (
+          <PublishButton hasChanges firstPublish />
         ) : (
           <p className="max-w-xs text-sm text-ink-soft">
             Upravujte, kolik chcete. Hostům web zpřístupníte zveřejněním po zaplacení balíčku.
           </p>
         )}
       </div>
+
+      {free ? (
+        <p className="-mt-6 rounded-xl bg-eucalyptus-mist px-4 py-3 text-sm text-eucalyptus-deep">
+          {w?.status === "published"
+            ? "Web je online zdarma. Platba se bude řešit až po spuštění plateb na platformě."
+            : "Zveřejnění je teď zdarma. Po zveřejnění web uvidí hosté a půjde odpovídat na pozvání."}
+        </p>
+      ) : null}
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">

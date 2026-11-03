@@ -232,6 +232,31 @@ await as('authenticated', coorg.id);
 await expectError('spoluorganizátor bez práv nezveřejní', () => q(`select publish_site($1)`, [wid]), 'forbidden');
 
 
+// --- zveřejnění zdarma, dokud neběží platby
+await as('authenticated', stranger.id);
+const [{ create_wedding: fw }] = await q(`select create_wedding('zdarma', 'A', 'B', '2027-09-01')`);
+check('platby zatím vypnuté', (await q(`select payments_enabled() p`))[0].p === false);
+await expectError('pár si sám nezmění stav webu', () => q(`update weddings set status='published' where id=$1`, [fw]), 'billing_columns_locked');
+await expectError('pár si sám nepřidá balíček', () => q(`update weddings set package='web' where id=$1`, [fw]), 'billing_columns_locked');
+await q(`update weddings set locales='{cs,en}' where id=$1`, [fw]);
+check('ostatní nastavení pár mění dál', true);
+await q(`select publish_site($1)`, [fw]);
+const [fwr] = await q(`select status::text s, published_free f from weddings where id=$1`, [fw]);
+check('web zveřejněn zdarma', fwr.s === 'published' && fwr.f === true);
+check('vznikla zveřejněná verze', (await q(`select count(*)::int c from site_pages where wedding_id=$1 and state='published'`, [fw]))[0].c === 1);
+await q(`select unpublish_free_site($1)`, [fw]);
+check('web zdarma jde skrýt', (await q(`select status::text s from weddings where id=$1`, [fw]))[0].s === 'draft');
+await expectError('zaplacený web se takto neskryje', () => q(`select unpublish_free_site($1)`, [wid]), 'forbidden');
+await as('postgres');
+await q(`update app.platform_settings set payments_enabled = true`);
+await as('authenticated', stranger.id);
+await expectError('po spuštění plateb je potřeba zaplatit', () => q(`select publish_site($1)`, [fw]), 'not_paid');
+await as('postgres');
+await q(`update app.platform_settings set payments_enabled = false`);
+await as('anon');
+await expectError('anonym nezjistí stav plateb', () => q(`select payments_enabled()`), 'permission denied');
+
+
 // --- zpevnění: anonym nevolá funkce pro páry
 await as('anon');
 await expectError('anonym nezaloží svatbu', () => q(`select create_wedding('anon-test', 'A', 'B', null)`), 'permission denied');

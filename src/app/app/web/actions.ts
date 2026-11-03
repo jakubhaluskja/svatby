@@ -100,9 +100,22 @@ export async function publishChanges(): Promise<PublishResult> {
   const { error } = await supabase.rpc("publish_site", { p_wedding_id: wedding.id });
   if (error) {
     if (error.message.includes("not_paid")) return { error: "Web zveřejníte po zaplacení balíčku." };
+    if (error.message.includes("not_publishable")) return { error: "Platnost webu skončila, zveřejnit ho teď nejde." };
     return { error: "Změny se nepodařilo zveřejnit." };
   }
   revalidatePath("/app/web");
+  revalidatePath("/app");
+  return { ok: true };
+}
+
+/** Skryje web zveřejněný zdarma (před spuštěním plateb). */
+export async function unpublishSite(): Promise<PublishResult> {
+  const wedding = await requireWedding();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("unpublish_free_site", { p_wedding_id: wedding.id });
+  if (error) return { error: "Web se nepodařilo skrýt." };
+  revalidatePath("/app/web");
+  revalidatePath("/app");
   return { ok: true };
 }
 
