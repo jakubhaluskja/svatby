@@ -36,10 +36,10 @@ export default async function GuestsPage({ searchParams }: Props) {
   const added = pridano ? book.households.find((h) => h.id === pridano) : null;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-10 sm:px-10">
+    <div className="flex max-w-5xl flex-col gap-10 px-6 py-8 sm:px-10 lg:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="font-display text-4xl font-semibold tracking-tight">Hosté</h1>
+          <h1 className="font-serif text-4xl tracking-tight">Hosté</h1>
           <p className="text-ink-soft">
             {guestTotal} hostů v {book.households.length} domácnostech
           </p>
@@ -63,7 +63,7 @@ export default async function GuestsPage({ searchParams }: Props) {
       {summary.length > 0 ? (
         <section aria-labelledby="souhrn" className="flex flex-col gap-3">
           <h2 id="souhrn" className="sr-only">Souhrn odpovědí</h2>
-          <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
+          <div className="overflow-x-auto rounded-2xl bg-surface shadow-card ring-1 ring-line/70">
             <table className="w-full text-left text-[15px]">
               <thead className="text-sm text-ink-soft">
                 <tr className="border-b border-line">

@@ -27,8 +27,8 @@ export default async function EditEventPage({ params }: Props) {
   const description = (e.description ?? {}) as Record<string, string>;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10 sm:px-10">
-      <h1 className="font-display text-4xl font-semibold tracking-tight">{name.cs || "Událost"}</h1>
+    <div className="flex max-w-3xl flex-col gap-8 px-6 py-8 sm:px-10 lg:py-10">
+      <h1 className="font-serif text-4xl tracking-tight">{name.cs || "Událost"}</h1>
       <EventForm
         eventId={e.id}
         showEnglish

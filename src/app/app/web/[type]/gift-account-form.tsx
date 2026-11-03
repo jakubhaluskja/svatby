@@ -8,7 +8,7 @@ export function GiftAccountForm({ account, holder, iban }: { account: string; ho
   const [state, action, pending] = useActionState<GiftAccountState, FormData>(saveGiftAccount, {});
   const inputCls = "h-11 rounded-lg border border-line bg-surface px-3.5 text-[15px] font-normal focus:border-eucalyptus focus:outline-none";
   return (
-    <form action={action} className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-5">
+    <form action={action} className="flex flex-col gap-5 rounded-2xl bg-surface shadow-card ring-1 ring-line/70 p-5">
       <div className="flex flex-col gap-1">
         <h2 className="font-medium">Účet pro dary</h2>
         <p className="text-sm text-ink-soft">Z čísla účtu vytvoříme QR platbu. Hosté ho naskenují v bankovní aplikaci a částku zvolí sami.</p>

@@ -80,7 +80,7 @@ export function HouseholdForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-10">
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-xl font-semibold tracking-tight">Kdo patří do domácnosti</h2>
+        <h2 className="font-serif text-2xl">Kdo patří do domácnosti</h2>
         <ul className="flex flex-col gap-3">
           {guests.map((g, i) => (
             <li key={g.key} className="grid grid-cols-2 gap-2 rounded-xl border border-line bg-surface p-3 sm:grid-cols-[1fr_1fr_11rem_auto]">
@@ -174,7 +174,7 @@ export function HouseholdForm({
       </section>
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 font-display text-xl font-semibold tracking-tight">Na co je pozvaná</legend>
+        <legend className="mb-1 font-serif text-2xl">Na co je pozvaná</legend>
         {events.length === 0 ? (
           <p className="text-sm text-ink-soft">
             Zatím nemáte žádné události. <Link href="/app/udalosti/nova" className="underline">Přidejte je</Link>, ať hosté můžou potvrdit účast.

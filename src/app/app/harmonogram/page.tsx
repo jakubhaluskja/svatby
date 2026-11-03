@@ -31,9 +31,9 @@ export default async function SchedulePage() {
   const shareLinks: ShareLink[] = (links ?? []).map((l) => ({ id: l.id, vendor_id: l.vendor_id, url: `${origin}/harmonogram/${l.token}` }));
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10 sm:px-10">
+    <div className="flex max-w-6xl flex-col gap-8 px-6 py-8 sm:px-10 lg:py-10">
       <div className="flex max-w-3xl flex-col gap-2">
-        <h1 className="font-display text-4xl font-semibold tracking-tight">Harmonogram dne D</h1>
+        <h1 className="font-serif text-4xl tracking-tight">Harmonogram dne D</h1>
         <p className="text-ink-soft">
           Minutu po minutě: kdo kdy přijede, kde co probíhá a koho volat. Svědci a dodavatelé ho otevřou odkazem v mobilu.
         </p>

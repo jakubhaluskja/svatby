@@ -246,7 +246,7 @@ export function Wizard({ appDomain }: { appDomain: string }) {
 function StepHeading({ title, text, ref }: { title: string; text: string; ref: React.Ref<HTMLHeadingElement> }) {
   return (
     <div className="flex flex-col gap-2">
-      <h1 ref={ref} tabIndex={-1} className="font-display text-3xl font-semibold tracking-tight focus:outline-none">
+      <h1 ref={ref} tabIndex={-1} className="font-serif text-3xl tracking-tight focus:outline-none">
         {title}
       </h1>
       <p className="text-ink-soft">{text}</p>

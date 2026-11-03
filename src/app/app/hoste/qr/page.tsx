@@ -32,11 +32,11 @@ export default async function QrPage() {
   );
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10 sm:px-10 print:max-w-none print:p-0">
+    <div className="flex max-w-5xl flex-col gap-8 px-6 py-8 sm:px-10 lg:py-10 print:max-w-none print:p-0">
       <div className="flex flex-wrap items-end justify-between gap-4 print:hidden">
         <div className="flex flex-col gap-2">
           <Link href="/app/hoste" className="text-sm text-ink-soft hover:text-ink">Zpět na hosty</Link>
-          <h1 className="font-display text-4xl font-semibold tracking-tight">QR kódy k tisku</h1>
+          <h1 className="font-serif text-4xl tracking-tight">QR kódy k tisku</h1>
           <p className="max-w-xl text-ink-soft">
             Každá domácnost má vlastní kód. Po naskenování se hostům otevře jejich pozvání. Vytiskněte je, nebo je uložte jako PDF a vložte do grafiky oznámení.
           </p>
@@ -49,7 +49,7 @@ export default async function QrPage() {
       ) : (
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 print:grid-cols-3 print:gap-0">
           {codes.map((c) => (
-            <li key={c.id} className="flex break-inside-avoid flex-col items-center gap-3 rounded-2xl border border-line bg-surface p-5 text-center print:rounded-none print:border-dashed">
+            <li key={c.id} className="flex break-inside-avoid flex-col items-center gap-3 rounded-2xl bg-surface shadow-card ring-1 ring-line/70 p-5 text-center print:rounded-none print:border-dashed">
               <div className="w-36" dangerouslySetInnerHTML={{ __html: c.svg }} />
               <span className="font-medium">{c.name}</span>
               <span className="text-xs text-ink-soft">

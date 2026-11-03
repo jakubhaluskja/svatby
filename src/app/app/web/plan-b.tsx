@@ -18,7 +18,7 @@ export function PlanBList({ items }: { items: Item[] }) {
     );
   }
   return (
-    <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
+    <ul className="divide-y divide-line rounded-2xl bg-surface shadow-card ring-1 ring-line/70">
       {list.map((i) => (
         <li key={i.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col">

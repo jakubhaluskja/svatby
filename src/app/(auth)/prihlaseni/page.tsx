@@ -10,7 +10,7 @@ export default async function SignInPage({ searchParams }: Props) {
   const { next, chyba } = await searchParams;
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="font-display text-3xl font-semibold tracking-tight">Přihlášení</h1>
+      <h1 className="font-serif text-3xl tracking-tight">Přihlášení</h1>
       {chyba === "odkaz" ? (
         <FormMessage>Odkaz z e-mailu už neplatí nebo byl použitý. Pokud jste e-mail potvrdili, stačí se přihlásit.</FormMessage>
       ) : null}

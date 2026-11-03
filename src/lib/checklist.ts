@@ -12,7 +12,19 @@ export type ChecklistTask = {
   assignee_email: string | null;
   source: string;
   sort: number;
+  category?: TaskCategory | null;
 };
+
+export const TASK_CATEGORIES = {
+  planning: { label: "Plánování", bg: "#eef0ea", fg: "#4a5a53" },
+  guests: { label: "Hosté", bg: "#f3e6ec", fg: "#7b3f5c" },
+  vendors: { label: "Dodavatelé", bg: "#e3ece7", fg: "#3c5a4d" },
+  attire: { label: "Oblečení", bg: "#f6ece2", fg: "#7a4f2c" },
+  ceremony: { label: "Obřad", bg: "#efe6f3", fg: "#5e3f7b" },
+  web: { label: "Web", bg: "#e5e9f2", fg: "#36466b" },
+  day: { label: "Den D", bg: "#f5eedb", fg: "#7a5f1f" },
+} as const;
+export type TaskCategory = keyof typeof TASK_CATEGORIES;
 
 export type Bucket = { key: string; label: string; tasks: ChecklistTask[] };
 

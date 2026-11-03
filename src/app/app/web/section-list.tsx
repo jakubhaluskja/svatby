@@ -20,7 +20,7 @@ export function SectionList({ items }: { items: Item[] }) {
   const [, start] = useTransition();
 
   return (
-    <ol className="divide-y divide-line rounded-2xl border border-line bg-surface">
+    <ol className="divide-y divide-line rounded-2xl bg-surface shadow-card ring-1 ring-line/70">
       {list.map((s, i) => (
         <li key={s.type} className={`flex items-center gap-3 px-4 py-3 sm:px-5 ${s.enabled ? "" : "bg-paper/60"}`}>
           <div className="flex shrink-0 flex-col">

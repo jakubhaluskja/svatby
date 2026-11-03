@@ -23,10 +23,10 @@ export default async function EventsPage() {
   for (const i of invites ?? []) invitedCount.set(i.event_id, (invitedCount.get(i.event_id) ?? 0) + 1);
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-10 sm:px-10">
+    <div className="flex max-w-4xl flex-col gap-8 px-6 py-8 sm:px-10 lg:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="font-display text-4xl font-semibold tracking-tight">Události</h1>
+          <h1 className="font-serif text-4xl tracking-tight">Události</h1>
           <p className="max-w-xl text-ink-soft">
             Části svatebního dne, na které zvete hosty. Z nich se skládá harmonogram na webu a hosté u nich potvrzují účast.
           </p>

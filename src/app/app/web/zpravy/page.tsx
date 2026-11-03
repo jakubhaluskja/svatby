@@ -22,10 +22,10 @@ export default async function MessagesPage() {
     m.banner_until && new Date(m.banner_until) <= now ? "Skončila" : m.scheduled_at && new Date(m.scheduled_at) > now ? "Naplánovaná" : "Zobrazuje se";
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-10 px-6 py-10 sm:px-10">
+    <div className="flex max-w-3xl flex-col gap-10 px-6 py-8 sm:px-10 lg:py-10">
       <div className="flex flex-col gap-2">
         <Link href="/app/web" className="text-sm text-ink-soft hover:text-ink">Zpět na web</Link>
-        <h1 className="font-display text-4xl font-semibold tracking-tight">Zprávy hostům</h1>
+        <h1 className="font-serif text-4xl tracking-tight">Zprávy hostům</h1>
         <p className="text-ink-soft">
           Krátké zprávy, které se hostům v daný čas ukážou nahoře na webu. Třeba „Obřad začíná za 30 minut“ nebo „Autobus odjíždí od kostela v 17:00“.
           Můžete si je připravit dopředu.

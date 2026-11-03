@@ -16,11 +16,12 @@ const schema = z.object({
   assignee: z.string(),
   assignee_name: z.string().trim().max(80),
   assignee_email: z.union([z.literal(""), z.string().trim().email("E-mail odpovědné osoby není platný.")]),
+  category: z.union([z.literal(""), z.enum(["planning", "guests", "vendors", "attire", "ceremony", "web", "day"])]),
 });
 
 export async function saveTask(taskId: string | null, parentId: string | null, _: TaskFormState, formData: FormData): Promise<TaskFormState> {
   const wedding = await requireWedding();
-  const parsed = schema.safeParse(Object.fromEntries(["title", "description", "due_date", "assignee", "assignee_name", "assignee_email"].map((k) => [k, String(formData.get(k) ?? "")])));
+  const parsed = schema.safeParse(Object.fromEntries(["title", "description", "due_date", "assignee", "assignee_name", "assignee_email", "category"].map((k) => [k, String(formData.get(k) ?? "")])));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const v = parsed.data;
   const member = v.assignee.startsWith("member:") ? uuid.safeParse(v.assignee.slice(7)) : null;
@@ -34,6 +35,7 @@ export async function saveTask(taskId: string | null, parentId: string | null, _
     assignee_member_id: member?.success ? member.data : null,
     assignee_name: v.assignee === "external" ? v.assignee_name || null : null,
     assignee_email: v.assignee === "external" ? v.assignee_email || null : null,
+    category: v.category || null,
   };
 
   const supabase = await createClient();

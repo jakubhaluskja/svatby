@@ -25,18 +25,18 @@ export default async function SeatingPage({ searchParams }: Props) {
   const data = current ? await loadSeating(supabase, wedding.id, current.id) : null;
 
   return (
-    <div className="mx-auto flex max-w-[90rem] flex-col gap-6 px-6 py-10 sm:px-10">
+    <div className="flex max-w-[90rem] flex-col gap-6 px-6 py-8 sm:px-10 lg:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="font-display text-4xl font-semibold tracking-tight">Zasedací pořádek</h1>
+          <h1 className="font-serif text-4xl tracking-tight">Zasedací pořádek</h1>
           <p className="max-w-2xl text-ink-soft">
             Rozmístěte stoly a posaďte potvrzené hosty. Návrh rozsazení drží domácnosti pohromadě, respektuje vaše pravidla a seskupuje hosty podle štítků.
           </p>
         </div>
         {seated.length > 1 ? (
-          <nav aria-label="Událost" className="flex flex-wrap gap-1">
+          <nav aria-label="Událost" className="flex flex-wrap gap-1 rounded-full bg-surface p-1 ring-1 ring-line">
             {seated.map((e) => (
-              <Link key={e.id} href={`?udalost=${e.id}`} aria-current={e.id === current?.id ? "page" : undefined} className={`rounded-full px-3.5 py-1.5 text-sm ${e.id === current?.id ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>
+              <Link key={e.id} href={`?udalost=${e.id}`} aria-current={e.id === current?.id ? "page" : undefined} className={`rounded-full px-3.5 py-1.5 text-sm ${e.id === current?.id ? "bg-ink font-medium text-white" : "text-ink-soft hover:text-ink"}`}>
                 {tr(e.name)}
               </Link>
             ))}

@@ -62,5 +62,38 @@ export function FormMessage({ tone = "error", children }: { tone?: "error" | "in
 
 /** Slovní značka aplikace, dokud nebude zvolený název. */
 export function Wordmark({ className = "" }: { className?: string }) {
-  return <span className={`font-display text-lg font-semibold tracking-tight text-ink ${className}`}>Svatby</span>;
+  return <span className={`font-serif text-[22px] font-medium tracking-tight text-ink ${className}`}>Svatby</span>;
+}
+
+/** Karta obsahu v administraci. */
+export function Card({ children, className = "", as: Tag = "section" }: { children: ReactNode; className?: string; as?: "section" | "div" | "article" | "li" }) {
+  return <Tag className={`rounded-2xl bg-surface shadow-card ring-1 ring-line/70 ${className}`}>{children}</Tag>;
+}
+
+/** Malý nadpis skupiny verzálkami. */
+export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <p className={`text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft/80 ${className}`}>{children}</p>;
+}
+
+const AVATAR_COLORS = ["#4f7263", "#7b3f5c", "#4a5f8a", "#b8913a", "#c08a5b"];
+
+/** Kolečko s iniciálami, barva odvozená od jména. */
+export function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
+  const letters = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return (
+    <span
+      title={name}
+      className={`grid shrink-0 place-items-center rounded-full font-semibold text-white ring-2 ring-surface ${size === "sm" ? "size-6 text-[10px]" : "size-7 text-[11px]"}`}
+      style={{ background: AVATAR_COLORS[h % AVATAR_COLORS.length] }}
+    >
+      {letters || "?"}
+    </span>
+  );
 }

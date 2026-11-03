@@ -15,11 +15,11 @@ export default async function CateringPage() {
   const hasUncategorized = summary.some((s) => (s.byCategory.get(null) ?? 0) > 0);
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-10 px-6 py-10 sm:px-10 print:max-w-none print:p-0">
+    <div className="flex max-w-4xl flex-col gap-10 px-6 py-8 sm:px-10 lg:py-10 print:max-w-none print:p-0">
       <div className="flex flex-wrap items-end justify-between gap-4 print:hidden">
         <div className="flex flex-col gap-2">
           <Link href="/app/hoste" className="text-sm text-ink-soft hover:text-ink">Zpět na hosty</Link>
-          <h1 className="font-display text-4xl font-semibold tracking-tight">Přehled pro catering</h1>
+          <h1 className="font-serif text-4xl tracking-tight">Přehled pro catering</h1>
           <p className="text-ink-soft">Počty potvrzených hostů a jejich strava. Čísla se mění s každou odpovědí.</p>
         </div>
         <PrintButton />
@@ -28,7 +28,7 @@ export default async function CateringPage() {
         {wedding.partner1_name} a {wedding.partner2_name}: podklady pro catering
       </h1>
 
-      <div className="overflow-x-auto rounded-2xl border border-line bg-surface print:rounded-none">
+      <div className="overflow-x-auto rounded-2xl bg-surface shadow-card ring-1 ring-line/70 print:rounded-none">
         <table className="w-full text-left text-[15px] tabular-nums">
           <thead className="text-sm text-ink-soft">
             <tr className="border-b border-line">
@@ -64,7 +64,7 @@ export default async function CateringPage() {
         const diets = dietNotes(book, s.event.id);
         return (
           <section key={s.event.id} className="flex flex-col gap-3 break-inside-avoid">
-            <h2 className="font-display text-xl font-semibold tracking-tight">{s.event.name}: strava a alergie</h2>
+            <h2 className="font-serif text-2xl">{s.event.name}: strava a alergie</h2>
             {diets.length === 0 ? (
               <p className="text-ink-soft">Nikdo z potvrzených hostů nehlásí zvláštní stravu.</p>
             ) : (

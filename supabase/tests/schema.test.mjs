@@ -65,6 +65,9 @@ const [{ create_wedding: wid }] = await q(
 check('svatba založena', !!wid);
 check('3 věkové kategorie', (await q(`select count(*)::int c from age_categories where wedding_id=$1`, [wid]))[0].c === 3);
 check('checklist ze šablony', (await q(`select count(*)::int c from tasks where wedding_id=$1`, [wid]))[0].c === 28);
+check('každý úkol ze šablony má kategorii', (await q(`select count(*)::int c from tasks where wedding_id=$1 and category is null`, [wid]))[0].c === 0);
+await expectError('neplatná kategorie odmítnuta',
+  () => q(`update tasks set category='party' where wedding_id=$1`, [wid]), 'tasks_category_check');
 check('rozpočet ze šablony', (await q(`select count(*)::int c from budget_categories where wedding_id=$1`, [wid]))[0].c === 12);
 check('2 alba', (await q(`select count(*)::int c from albums where wedding_id=$1`, [wid]))[0].c === 2);
 check('koncept webu', (await q(`select jsonb_array_length(sections) n from site_pages where wedding_id=$1`, [wid]))[0].n === 10);

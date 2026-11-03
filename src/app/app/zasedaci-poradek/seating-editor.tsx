@@ -2,16 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { LayoutItem, SeatingData, SeatingGuest } from "@/lib/seating-data";
+import { Icon } from "@/components/icons";
+import { Avatar } from "@/components/ui";
 import { photoUrl } from "@/lib/media";
 import { createClient } from "@/lib/supabase/client";
 import { freeSeatIndexes, initials, seatMap, type Problem } from "@/lib/seating";
 import { addRule, assignGuests, autoSeat, clearSeating, deleteRule, saveLayout, seatAt, setLocked, unassignGuests } from "./actions";
-import { DECOR_PRESETS, seatPositions, ShapeOutline, TABLE_PRESETS, type ShapeId } from "./shapes";
+import { CanvasDefs, ChairShape, DECOR_PRESETS, seatFacing, seatPositions, ShapeOutline, TABLE_PRESETS, type ChairState, type ShapeId } from "./shapes";
 
 type Assignment = SeatingData["assignments"][number];
-type Panel = "guests" | "rules";
+type Panel = "guests" | "rules" | "library";
 
-const btn = "h-9 rounded-full border border-line bg-surface px-3.5 text-sm font-medium hover:border-eucalyptus disabled:opacity-50";
+const btn = "h-9 rounded-full bg-surface px-3.5 text-sm font-medium ring-1 ring-line hover:ring-eucalyptus disabled:opacity-50";
 const input = "h-9 rounded-lg border border-line bg-surface px-2.5 text-sm focus:border-eucalyptus focus:outline-none";
 
 export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData; weddingId: string; canEdit: boolean }) {
@@ -34,6 +36,18 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const itemsRef = useRef(items);
   itemsRef.current = items;
+  const W = data.layout.width;
+  const H = data.layout.height;
+  const [view, setView] = useState(() => fitView(data.items, W, H));
+  const pan = useRef<{ x: number; y: number; vx: number; vy: number; moved: boolean } | null>(null);
+
+  function zoom(factor: number) {
+    setView((v) => {
+      const w = Math.min(W * 1.5, Math.max(300, v.w * factor));
+      const h = (w * H) / W;
+      return { x: v.x + (v.w - w) / 2, y: v.y + (v.h - h) / 2, w, h };
+    });
+  }
 
   useEffect(() => setAssignments(data.assignments), [data.assignments]);
 
@@ -82,8 +96,8 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
       shape: preset.shape,
       label: kind === "table" ? `Stůl ${n}` : preset.label,
       seats: kind === "table" ? preset.seats ?? 8 : 0,
-      x: data.layout.width / 2 + offset,
-      y: data.layout.height / 2 + offset,
+      x: Math.round(view.x + view.w / 2 + offset),
+      y: Math.round(view.y + view.h / 2 + offset),
       w: preset.w,
       h: preset.h,
       rotation: 0,
@@ -227,26 +241,10 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
       <div className="flex flex-wrap items-center gap-2">
         {canEdit ? (
           <>
-            <details className="relative">
-              <summary className={`${btn} inline-flex cursor-pointer list-none items-center`}>Přidat stůl</summary>
-              <div className="absolute z-20 mt-1 flex w-48 flex-col rounded-xl border border-line bg-surface p-1 shadow-lg">
-                {TABLE_PRESETS.map((p) => (
-                  <button key={p.shape} type="button" onClick={(e) => { addItem("table", p); (e.currentTarget.closest("details") as HTMLDetailsElement).open = false; }} className="rounded-lg px-3 py-2 text-left text-sm hover:bg-paper">
-                    {p.label} <span className="text-ink-soft">({p.seats} míst)</span>
-                  </button>
-                ))}
-              </div>
-            </details>
-            <details className="relative">
-              <summary className={`${btn} inline-flex cursor-pointer list-none items-center`}>Přidat prvek</summary>
-              <div className="absolute z-20 mt-1 flex w-40 flex-col rounded-xl border border-line bg-surface p-1 shadow-lg">
-                {DECOR_PRESETS.map((p) => (
-                  <button key={p.shape} type="button" onClick={(e) => { addItem("decor", p); (e.currentTarget.closest("details") as HTMLDetailsElement).open = false; }} className="rounded-lg px-3 py-2 text-left text-sm hover:bg-paper">
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </details>
+            <button type="button" className={`${btn} inline-flex items-center gap-1.5`} onClick={() => { setSelected(null); setPanel("library"); }}>
+              <Icon n="plus" className="size-4" />
+              Přidat stůl nebo prvek
+            </button>
             <label className={`${btn} inline-flex cursor-pointer items-center`}>
               {background ? "Vyměnit půdorys" : "Nahrát půdorys sálu"}
               <input type="file" accept="image/jpeg,image/png" className="sr-only" onChange={(e) => e.target.files?.[0] && uploadPlan(e.target.files[0])} />
@@ -310,26 +308,45 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         {/* Plátno */}
-        <div ref={wrap} className="relative overflow-hidden rounded-2xl border border-line bg-surface">
+        <div ref={wrap} className="relative self-start overflow-hidden rounded-3xl bg-[#f3f1ec] ring-1 ring-line/70">
           <svg
             ref={svg}
-            viewBox={`0 0 ${data.layout.width} ${data.layout.height}`}
-            className="block h-auto w-full touch-none select-none"
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerDown={() => {
-              setSelected(null);
-              setChair(null);
+            viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
+            className={`block h-auto w-full touch-none select-none ${pan.current ? "cursor-grabbing" : ""}`}
+            onPointerMove={(e) => {
+              const pn = pan.current;
+              if (pn) {
+                const scale = view.w / (svg.current?.clientWidth || 1);
+                const dx = (e.clientX - pn.x) * scale;
+                const dy = (e.clientY - pn.y) * scale;
+                if (Math.abs(dx) + Math.abs(dy) > 2) pn.moved = true;
+                setView((v) => ({ ...v, x: pn.vx - dx, y: pn.vy - dy }));
+                return;
+              }
+              onPointerMove(e);
+            }}
+            onPointerUp={() => {
+              if (pan.current) {
+                const moved = pan.current.moved;
+                pan.current = null;
+                if (!moved) {
+                  setSelected(null);
+                  setChair(null);
+                }
+                return;
+              }
+              onPointerUp();
+            }}
+            onPointerDown={(e) => {
+              (e.currentTarget as Element).setPointerCapture(e.pointerId);
+              pan.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
             }}
             role="application"
             aria-label="Plán sálu. Stoly přesunete tažením nebo šipkami."
           >
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <circle cx="1" cy="1" r="1.5" fill="#d9e1dc" />
-              </pattern>
-            </defs>
-            <rect width={data.layout.width} height={data.layout.height} fill="url(#grid)" />
+            <CanvasDefs />
+            <rect x={-W} y={-H} width={W * 3} height={H * 3} fill="#f3f1ec" />
+            <rect x={-W} y={-H} width={W * 3} height={H * 3} fill="url(#grid)" />
             {bgUrl ? <image href={bgUrl} width={data.layout.width} height={data.layout.height} preserveAspectRatio="xMidYMid meet" opacity={0.45} /> : null}
 
             {items.map((item) => {
@@ -360,7 +377,7 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
                     const guestId = chairs[i];
                     const g = guestId ? guestById.get(guestId) : null;
                     const open = chair?.tableId === item.id && chair.index === i;
-                    const fill = !g ? "#ffffff" : g.status === "yes" ? "#4f7263" : g.status === "pending" ? "#dfe9e3" : "#f3e3ea";
+                    const state: ChairState = !g ? "free" : g.status === "yes" ? "yes" : g.status === "pending" ? "pending" : "no";
                     return (
                       <g
                         key={i}
@@ -376,44 +393,42 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
                         tabIndex={0}
                         role="button"
                         aria-label={g ? `Židle ${i + 1}: ${g.name}` : `Židle ${i + 1}: volná`}
-                        className="cursor-pointer outline-none [&:focus-visible>circle]:stroke-[5]"
+                        className="group/chair cursor-pointer outline-none"
                       >
-                        <circle
-                          r={28}
-                          fill={fill}
-                          stroke={open ? "#1e2b26" : g ? (g.status === "no" ? "#7b3f5c" : "#3c5a4d") : "#9fb1a8"}
-                          strokeWidth={open ? 4 : 2}
-                          strokeDasharray={g?.status === "pending" ? "4 3" : undefined}
-                        />
+                        <g transform={`rotate(${seatFacing(item.shape as ShapeId, item.w, item.h, p)})`} className="transition-transform group-hover/chair:scale-105 group-focus-visible/chair:scale-110">
+                          <ChairShape state={state} active={open} />
+                        </g>
                         <g transform={`rotate(${-item.rotation})`}>
                           {g ? (
-                            <text textAnchor="middle" dy={7} fontSize={20} fontWeight={600} fill={g.status === "yes" ? "#ffffff" : "#1e2b26"} pointerEvents="none">
+                            <text textAnchor="middle" dy={7} fontSize={19} fontWeight={600} fill={state === "pending" ? "#7b3f5c" : state === "no" ? "#a33a2f" : "#3c5a4d"} pointerEvents="none">
                               {initials(g.name)}
                             </text>
                           ) : (
-                            <text textAnchor="middle" dy={9} fontSize={26} fill="#9fb1a8" pointerEvents="none">+</text>
+                            <text textAnchor="middle" dy={8} fontSize={24} fill="#b9c6bf" pointerEvents="none" className="opacity-0 group-hover/chair:opacity-100">+</text>
                           )}
                         </g>
                       </g>
                     );
                   })}
-                  <ShapeOutline
-                    shape={item.shape as ShapeId}
-                    w={item.w}
-                    h={item.h}
-                    style={{
-                      fill: item.kind === "decor" ? "#f5f7f5" : target ? "#e3ece7" : "#ffffff",
-                      stroke: over ? "#a33a2f" : isSel ? "#4f7263" : "#9fb1a8",
-                      strokeWidth: isSel || over ? 4 : 2,
-                      strokeDasharray: item.kind === "decor" ? "8 6" : undefined,
-                    }}
-                  />
+                  <g filter={item.kind === "table" ? "url(#table-shadow)" : undefined}>
+                    <ShapeOutline
+                      shape={item.shape as ShapeId}
+                      w={item.w}
+                      h={item.h}
+                      style={{
+                        fill: item.shape === "dancefloor" ? "url(#wood)" : item.kind === "decor" ? "#ebe6dd" : target ? "#e3ece7" : "#ffffff",
+                        stroke: over ? "#a33a2f" : isSel ? "#4f7263" : item.kind === "decor" ? "#ddd4c6" : "#e1e7e3",
+                        strokeWidth: isSel || over ? 4 : 2,
+                      }}
+                    />
+                  </g>
+                  {item.shape === "round" && item.w > 80 ? <circle r={item.w / 2 - 14} fill="none" stroke="#eef2ef" strokeWidth={2} pointerEvents="none" /> : null}
                   <g transform={`rotate(${-item.rotation})`}>
-                    <text textAnchor="middle" dy={item.kind === "table" ? -2 : 8} fontSize={26} fontWeight={600} fill="#1e2b26">
+                    <text textAnchor="middle" dy={item.kind === "table" ? -2 : 8} fontSize={item.kind === "table" ? 28 : 24} fill={item.kind === "decor" ? "#8a7458" : "#1e2b26"} fontFamily="var(--font-serif)">
                       {item.label}
                     </text>
                     {item.kind === "table" ? (
-                      <text textAnchor="middle" dy={26} fontSize={21} fill={over ? "#a33a2f" : "#4a5a53"}>
+                      <text textAnchor="middle" dy={26} fontSize={19} fill={over ? "#a33a2f" : "#4a5a53"}>
                         {seatedHere.length}/{item.seats}
                       </text>
                     ) : null}
@@ -428,6 +443,16 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
               </text>
             ) : null}
           </svg>
+          <div className="pointer-events-none absolute bottom-3 left-3 hidden flex-wrap gap-x-4 gap-y-1 rounded-full bg-surface/90 px-4 py-1.5 text-xs text-ink-soft ring-1 ring-line backdrop-blur sm:flex">
+            <span className="flex items-center gap-1.5"><span className="size-3 rounded-[4px] border border-[#8faa9d] bg-eucalyptus-mist" />Potvrzený</span>
+            <span className="flex items-center gap-1.5"><span className="size-3 rounded-[4px] border border-dashed border-[#c9a3b5] bg-[#f6ebf0]" />Čeká na odpověď</span>
+            <span className="flex items-center gap-1.5"><span className="size-3 rounded-[4px] border border-[#c9d3cd] bg-white" />Volno</span>
+          </div>
+          <div className="absolute bottom-3 right-3 flex items-center gap-0.5 rounded-full bg-surface px-1 py-1 text-sm ring-1 ring-line">
+            <button type="button" onClick={() => zoom(1.25)} aria-label="Oddálit" className="grid size-7 place-items-center rounded-full hover:bg-paper">−</button>
+            <button type="button" onClick={() => setView(fitView(items, W, H))} className="rounded-full px-2 text-xs text-ink-soft hover:bg-paper hover:text-ink">Celý sál</button>
+            <button type="button" onClick={() => zoom(0.8)} aria-label="Přiblížit" className="grid size-7 place-items-center rounded-full hover:bg-paper">+</button>
+          </div>
           {chair ? (
             <ChairPopover
               key={`${chair.tableId}-${chair.index}`}
@@ -454,7 +479,7 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
         </div>
 
         {/* Panel */}
-        <aside className="flex max-h-[44rem] flex-col gap-3 overflow-hidden rounded-2xl border border-line bg-surface p-4">
+        <aside className="flex max-h-[44rem] flex-col gap-3 overflow-hidden rounded-2xl bg-surface p-4 shadow-card ring-1 ring-line/70 lg:sticky lg:top-6">
           {selectedItem ? (
             <ItemPanel
               item={selectedItem}
@@ -474,9 +499,9 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
           ) : (
             <>
               <div className="flex gap-1">
-                {(["guests", "rules"] as const).map((p) => (
+                {(canEdit ? (["guests", "rules", "library"] as const) : (["guests", "rules"] as const)).map((p) => (
                   <button key={p} type="button" onClick={() => setPanel(p)} aria-pressed={panel === p} className={`rounded-full px-3 py-1.5 text-sm ${panel === p ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>
-                    {p === "guests" ? `Neposazení (${unseated.length})` : `Pravidla (${data.rules.length})`}
+                    {p === "guests" ? `Neposazení ${unseated.length}` : p === "rules" ? `Pravidla ${data.rules.length}` : "Stoly"}
                   </button>
                 ))}
               </div>
@@ -510,30 +535,30 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
                           key={members[0].household_id}
                           draggable={canEdit}
                           onDragStart={(e) => e.dataTransfer.setData("application/x-guests", JSON.stringify(ids))}
-                          className="rounded-xl border border-line p-2"
+                          className="flex flex-col gap-1"
                         >
                           <button
                             type="button"
                             disabled={!canEdit}
                             onClick={() => setPicked((p) => (allPicked ? p.filter((x) => !ids.includes(x)) : [...new Set([...p, ...ids])]))}
-                            className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-sm font-medium ${allPicked ? "bg-eucalyptus-mist" : "hover:bg-paper"}`}
+                            className={`flex w-full items-center justify-between rounded-lg px-1 text-left text-xs ${allPicked ? "text-eucalyptus-deep" : "text-ink-soft hover:text-ink"}`}
                           >
                             {members[0].household}
-                            <span className="text-xs font-normal text-ink-soft">{members.length > 1 ? `celá domácnost (${members.length})` : ""}</span>
+                            {members.length > 1 ? <span>vybrat všechny ({members.length})</span> : null}
                           </button>
-                          {members.length > 1
-                            ? members.map((g) => (
-                                <GuestChip key={g.id} guest={g} picked={picked.includes(g.id)} canEdit={canEdit} onToggle={() => setPicked((p) => (p.includes(g.id) ? p.filter((x) => x !== g.id) : [...p, g.id]))} />
-                              ))
-                            : <GuestMeta guest={members[0]} />}
+                          {members.map((g) => (
+                            <GuestChip key={g.id} guest={g} picked={picked.includes(g.id)} canEdit={canEdit} onToggle={() => setPicked((p) => (p.includes(g.id) ? p.filter((x) => x !== g.id) : [...p, g.id]))} />
+                          ))}
                         </li>
                       );
                     })}
                     {households.length === 0 ? <li className="text-sm text-ink-soft">{unseated.length ? "Nic neodpovídá filtru." : "Všichni potvrzení hosté sedí."}</li> : null}
                   </ul>
                 </>
-              ) : (
+              ) : panel === "rules" ? (
                 <RulesPanel data={data} tables={tables} canEdit={canEdit} eventId={eventId} />
+              ) : (
+                <Library onAdd={(kind, preset) => { addItem(kind, preset); }} />
               )}
             </>
           )}
@@ -543,12 +568,8 @@ export function SeatingEditor({ data, weddingId, canEdit }: { data: SeatingData;
   );
 }
 
-function GuestMeta({ guest }: { guest: SeatingGuest }) {
-  const meta = [guest.status === "pending" ? "čeká na odpověď" : null, guest.category && guest.category !== "Dospělý" ? guest.category : null, guest.diet, guest.allergies ? `alergie: ${guest.allergies}` : null, guest.high_chair ? "židlička" : null, ...guest.tags].filter(Boolean);
-  return meta.length ? <p className="px-2 text-xs text-ink-soft">{meta.join(", ")}</p> : null;
-}
-
 function GuestChip({ guest, picked, canEdit, onToggle }: { guest: SeatingGuest; picked: boolean; canEdit: boolean; onToggle: () => void }) {
+  const meta = [guest.category && guest.category !== "Dospělý" ? guest.category : null, guest.diet, guest.allergies ? `alergie: ${guest.allergies}` : null, guest.high_chair ? "židlička" : null, ...guest.tags].filter(Boolean);
   return (
     <div
       draggable={canEdit}
@@ -557,10 +578,64 @@ function GuestChip({ guest, picked, canEdit, onToggle }: { guest: SeatingGuest; 
         e.dataTransfer.setData("application/x-guests", JSON.stringify([guest.id]));
       }}
     >
-      <button type="button" disabled={!canEdit} onClick={onToggle} className={`flex w-full flex-col rounded-lg px-2 py-1 text-left text-sm ${picked ? "bg-eucalyptus-mist" : "hover:bg-paper"}`}>
-        {guest.name}
+      <button
+        type="button"
+        disabled={!canEdit}
+        onClick={onToggle}
+        aria-pressed={picked}
+        className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm ring-1 transition-colors ${picked ? "bg-eucalyptus-mist ring-eucalyptus" : "bg-surface ring-line/70 hover:ring-eucalyptus/50"}`}
+      >
+        {canEdit ? <Icon n="drag" className="size-4 shrink-0 text-ink-soft/50" /> : null}
+        <Avatar name={guest.name} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate">{guest.name}</span>
+          {meta.length ? <span className="block truncate text-xs text-ink-soft">{meta.join(", ")}</span> : null}
+        </span>
+        {guest.status === "pending" ? <span className="shrink-0 text-[11px] text-plum">čeká</span> : null}
       </button>
-      <GuestMeta guest={guest} />
+    </div>
+  );
+}
+
+const LIBRARY: ({ kind: "table"; preset: (typeof TABLE_PRESETS)[number] } | { kind: "decor"; preset: (typeof DECOR_PRESETS)[number] })[] = [
+  ...TABLE_PRESETS.map((preset) => ({ kind: "table" as const, preset })),
+  ...DECOR_PRESETS.map((preset) => ({ kind: "decor" as const, preset })),
+];
+
+/** Knihovna stolů a prvků sálu s náhledy. */
+function Library({ onAdd }: { onAdd: (kind: "table" | "decor", preset: { shape: ShapeId; label: string; w: number; h: number; seats?: number }) => void }) {
+  return (
+    <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
+      <p className="text-sm text-ink-soft">Klepnutím přidáte doprostřed sálu, pak ho přetáhněte na místo.</p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+        {LIBRARY.map(({ kind, preset }) => {
+          const seats = kind === "table" ? seatPositions(preset.shape, preset.w, preset.h, preset.seats) : [];
+          const m = kind === "table" ? 80 : 20;
+          const vw = preset.w + m * 2;
+          const vh = preset.h + m * 2;
+          const size = Math.max(vw, vh);
+          return (
+            <button
+              key={preset.shape}
+              type="button"
+              onClick={() => onAdd(kind, preset)}
+              className="flex flex-col items-center gap-1 rounded-xl bg-paper px-1 py-2 text-xs text-ink-soft ring-1 ring-transparent hover:text-ink hover:ring-eucalyptus/50"
+            >
+              <svg viewBox={`${-size / 2} ${-size / 2} ${size} ${size}`} className="size-16" aria-hidden>
+                <CanvasDefs />
+                {seats.map((p, i) => (
+                  <g key={i} transform={`translate(${p.x} ${p.y}) rotate(${seatFacing(preset.shape, preset.w, preset.h, p)})`}>
+                    <ChairShape state="free" />
+                  </g>
+                ))}
+                <ShapeOutline shape={preset.shape} w={preset.w} h={preset.h} style={{ fill: preset.shape === "dancefloor" ? "url(#wood)" : kind === "decor" ? "#ebe6dd" : "#ffffff", stroke: kind === "decor" ? "#ddd4c6" : "#d9e1dc", strokeWidth: 3 }} />
+              </svg>
+              {preset.label}
+              {kind === "table" ? <span className="-mt-1 text-[11px] text-ink-soft/70">{preset.seats} míst</span> : null}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -807,7 +882,7 @@ function ChairPopover({
       aria-label={`${tableLabel}, židle ${index + 1}`}
       onPointerDown={(e) => e.stopPropagation()}
       style={{ left: pos.left, top: pos.top }}
-      className="absolute z-30 flex w-72 -translate-x-1/2 flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-[0_16px_40px_-12px_rgba(30,43,38,0.35)]"
+      className="absolute z-30 flex w-72 -translate-x-1/2 flex-col gap-3 rounded-2xl bg-surface p-4 shadow-pop ring-1 ring-line"
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-medium">
@@ -820,7 +895,7 @@ function ChairPopover({
 
       {occupant ? (
         <div className="flex flex-col gap-2 rounded-xl bg-paper px-3 py-2.5">
-          <span className="font-medium">{occupant.name}</span>
+          <span className="flex items-center gap-2.5 font-medium"><Avatar name={occupant.name} />{occupant.name}</span>
           <span className="text-sm text-ink-soft">
             {[occupant.household !== occupant.name ? occupant.household : null, status(occupant), occupant.diet, occupant.allergies ? `alergie: ${occupant.allergies}` : null]
               .filter(Boolean)
@@ -828,7 +903,7 @@ function ChairPopover({
           </span>
           {canEdit && !choosing ? (
             <div className="flex gap-2 pt-1">
-              <button type="button" onClick={() => setChoosing(true)} className="h-9 flex-1 rounded-full bg-eucalyptus text-sm font-medium text-white hover:bg-eucalyptus-deep">
+              <button type="button" onClick={() => setChoosing(true)} className="h-9 flex-1 rounded-full bg-ink text-sm font-medium text-white hover:bg-ink/85">
                 Vyměnit hosta
               </button>
               <button type="button" onClick={() => onFree(occupant.id)} className="h-9 flex-1 rounded-full border border-line text-sm font-medium hover:border-danger hover:text-danger">
@@ -848,22 +923,26 @@ function ChairPopover({
             aria-label="Najít hosta"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="h-10 rounded-lg border border-line bg-surface px-3 text-[15px] focus:border-eucalyptus focus:outline-none"
+            className="h-10 rounded-xl border-0 bg-paper px-3 text-[15px] focus:outline-2 focus:outline-eucalyptus"
           />
           <ul className="flex max-h-64 flex-col overflow-y-auto">
             {free.map((g) => (
               <li key={g.id}>
-                <button type="button" onClick={() => onSeat(g.id)} className="flex w-full flex-col rounded-lg px-2.5 py-2 text-left hover:bg-eucalyptus-mist">
-                  <span className="text-[15px]">{g.name}</span>
-                  <span className="text-xs text-ink-soft">{[g.household !== g.name ? g.household : null, status(g)].filter(Boolean).join(", ")}</span>
+                <button type="button" onClick={() => onSeat(g.id)} className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-eucalyptus-mist">
+                  <Avatar name={g.name} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[15px] font-medium">{g.name}</span>
+                    <span className={`block truncate text-xs ${g.status === "pending" ? "text-plum" : "text-ink-soft"}`}>{[g.household !== g.name ? g.household : null, status(g)].filter(Boolean).join(", ") || "potvrdil účast"}</span>
+                  </span>
                 </button>
               </li>
             ))}
             {elsewhere.length ? <li className="px-2.5 pb-1 pt-3 text-xs text-ink-soft">Už sedí jinde, přesadit sem</li> : null}
             {elsewhere.map((g) => (
               <li key={g.id}>
-                <button type="button" onClick={() => onSeat(g.id)} className="flex w-full flex-col rounded-lg px-2.5 py-2 text-left text-ink-soft hover:bg-eucalyptus-mist hover:text-ink">
-                  <span className="text-[15px]">{g.name}</span>
+                <button type="button" onClick={() => onSeat(g.id)} className="flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-ink-soft hover:bg-eucalyptus-mist hover:text-ink">
+                  <Avatar name={g.name} size="sm" />
+                  <span className="truncate text-[15px]">{g.name}</span>
                 </button>
               </li>
             ))}
@@ -874,4 +953,34 @@ function ChairPopover({
       {!canEdit && !occupant ? <p className="text-sm text-ink-soft">Židle je volná.</p> : null}
     </div>
   );
+}
+
+/** Výřez plátna, který ukáže všechny stoly s okrajem (zachová poměr stran sálu). */
+function fitView(items: LayoutItem[], W: number, H: number) {
+  if (!items.length) return { x: 0, y: 0, w: W, h: H };
+  const pad = 110;
+  const xs = items.flatMap((i) => [i.x - i.w / 2 - pad, i.x + i.w / 2 + pad]);
+  const ys = items.flatMap((i) => [i.y - i.h / 2 - pad, i.y + i.h / 2 + pad]);
+  let x = Math.min(...xs);
+  let y = Math.min(...ys);
+  let w = Math.max(...xs) - x;
+  let h = Math.max(...ys) - y;
+  const ratio = W / H;
+  if (w / h > ratio) {
+    const nh = w / ratio;
+    y -= (nh - h) / 2;
+    h = nh;
+  } else {
+    const nw = h * ratio;
+    x -= (nw - w) / 2;
+    w = nw;
+  }
+  if (w < 900) {
+    const f = 900 / w;
+    x -= (w * f - w) / 2;
+    y -= (h * f - h) / 2;
+    w *= f;
+    h *= f;
+  }
+  return { x, y, w, h };
 }

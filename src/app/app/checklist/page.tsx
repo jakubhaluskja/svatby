@@ -6,13 +6,16 @@ import { ChecklistView } from "./checklist-view";
 
 export const metadata = { title: "Checklist" };
 
-export default async function ChecklistPage() {
+type Props = { searchParams: Promise<{ ukol?: string }> };
+
+export default async function ChecklistPage({ searchParams }: Props) {
+  const { ukol } = await searchParams;
   const [wedding, user] = await Promise.all([requireWedding(), requireUser()]);
   const supabase = await createClient();
   const [{ data: tasks }, { data: members }, level] = await Promise.all([
     supabase
       .from("tasks")
-      .select("id, parent_id, title, description, due_date, done_at, assignee_member_id, assignee_name, assignee_email, source, sort")
+      .select("id, parent_id, title, description, due_date, done_at, assignee_member_id, assignee_name, assignee_email, source, sort, category")
       .eq("wedding_id", wedding.id)
       .order("due_date", { ascending: true, nullsFirst: false })
       .order("sort"),
@@ -32,20 +35,13 @@ export default async function ChecklistPage() {
   }));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10 sm:px-10">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-display text-4xl font-semibold tracking-tight">Checklist</h1>
-        <p className="text-ink-soft">
-          Úkoly s termíny podle data svatby. Když datum změníte, termíny z výchozího seznamu se posunou samy.
-        </p>
-      </div>
-      <ChecklistView
-        tasks={(tasks ?? []) as ChecklistTask[]}
-        weddingDate={wedding.wedding_date}
-        today={utcToZonedParts(new Date().toISOString()).date}
-        members={memberList}
-        canEdit={level === "write"}
-      />
-    </div>
+    <ChecklistView
+      tasks={(tasks ?? []) as ChecklistTask[]}
+      weddingDate={wedding.wedding_date}
+      today={utcToZonedParts(new Date().toISOString()).date}
+      members={memberList}
+      canEdit={level === "write"}
+      initialTask={ukol && /^[0-9a-f-]{36}$/.test(ukol) ? ukol : null}
+    />
   );
 }

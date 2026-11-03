@@ -18,8 +18,8 @@ export default async function EditHouseholdPage({ params }: Props) {
   if (!h) notFound();
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10 sm:px-10">
-      <h1 className="font-display text-4xl font-semibold tracking-tight">{h.name}</h1>
+    <div className="flex max-w-3xl flex-col gap-8 px-6 py-8 sm:px-10 lg:py-10">
+      <h1 className="font-serif text-4xl tracking-tight">{h.name}</h1>
       <HouseholdForm
         categories={book.categories}
         knownTags={book.tags}

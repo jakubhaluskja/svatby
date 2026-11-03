@@ -34,11 +34,11 @@ export default async function HouseholdPage({ params, searchParams }: Props) {
       : `Ahoj, srdečně vás zveme na naši svatbu. ${couple}. Účast prosím potvrďte tady:`;
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-10 px-6 py-10 sm:px-10">
+    <div className="flex max-w-4xl flex-col gap-10 px-6 py-8 sm:px-10 lg:py-10">
       <div className="flex flex-col gap-3">
         <Link href="/app/hoste" className="text-sm text-ink-soft hover:text-ink">Zpět na hosty</Link>
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <h1 className="font-display text-4xl font-semibold tracking-tight">{h.name}</h1>
+          <h1 className="font-serif text-4xl tracking-tight">{h.name}</h1>
           <Link href={`/app/hoste/${h.id}/upravit`} className="inline-flex h-10 items-center rounded-full border border-line bg-surface px-5 text-sm font-medium hover:border-eucalyptus">
             Upravit domácnost
           </Link>
@@ -57,11 +57,11 @@ export default async function HouseholdPage({ params, searchParams }: Props) {
       <LinkPanel householdId={h.id} url={url} shortCode={h.short_code} message={message} />
 
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">Účast</h2>
+        <h2 className="font-serif text-2xl tracking-tight">Účast</h2>
         {events.length === 0 ? (
           <p className="text-ink-soft">Domácnost zatím není pozvaná na žádnou událost. Nastavíte to v úpravě domácnosti.</p>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
+          <div className="overflow-x-auto rounded-2xl bg-surface shadow-card ring-1 ring-line/70">
             <table className="w-full text-left text-[15px]">
               <thead className="text-sm text-ink-soft">
                 <tr className="border-b border-line">
@@ -102,11 +102,11 @@ export default async function HouseholdPage({ params, searchParams }: Props) {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">Údaje z odpovědi</h2>
+        <h2 className="font-serif text-2xl tracking-tight">Údaje z odpovědi</h2>
         <form action={saveRsvpDetails.bind(null, h.id)} className="flex flex-col gap-5">
           <div className="grid gap-4 sm:grid-cols-2">
             {h.guests.map((g) => (
-              <fieldset key={g.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4">
+              <fieldset key={g.id} className="flex flex-col gap-2 rounded-xl bg-surface p-4 shadow-card ring-1 ring-line/70">
                 <legend className="px-1 text-sm font-medium">{guestName(g)}</legend>
                 <label className="flex flex-col gap-1 text-sm">
                   Strava

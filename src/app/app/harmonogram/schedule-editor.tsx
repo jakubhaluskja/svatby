@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
+import { Icon } from "@/components/icons";
 import { FormMessage } from "@/components/ui";
 import type { ScheduleItem } from "@/lib/schedule";
 import { createShareLink, deleteItem, revokeShareLink, saveItem, saveVendor, type FormState } from "./actions";
@@ -36,12 +37,28 @@ export function ScheduleEditor({
     new Intl.DateTimeFormat("cs-CZ", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${d}T00:00:00Z`));
   const mainLink = links.find((l) => !l.vendor_id) ?? null;
   const vendorsWithItems = vendors.filter((v) => items.some((i) => i.vendor_id === v.id));
+  const last = items.reduce<ScheduleItem | null>((m, i) => (!m || (i.ends_at ?? i.starts_at) > (m.ends_at ?? m.starts_at) ? i : m), null);
+  const lastEnd = last ? local[last.id].end || local[last.id].start : null;
 
   return (
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            [String(items.length), items.length === 1 ? "položka" : items.length < 5 && items.length > 0 ? "položky" : "položek"],
+            [items.length ? local[items[0].id].start : "–", "začátek"],
+            [lastEnd ?? "–", "konec"],
+            [String(vendorsWithItems.length), "dodavatelé"],
+          ].map(([v, l]) => (
+            <div key={l} className="rounded-xl bg-surface px-4 py-3 shadow-card ring-1 ring-line/70">
+              <p className="font-display text-2xl font-semibold tabular-nums">{v}</p>
+              <p className="text-sm text-ink-soft">{l}</p>
+            </div>
+          ))}
+        </div>
         {canEdit ? (
-          <button type="button" onClick={() => setEditing("new")} className="h-10 self-start rounded-full bg-eucalyptus px-5 text-sm font-medium text-white hover:bg-eucalyptus-deep">
+          <button type="button" onClick={() => setEditing("new")} className="inline-flex h-10 items-center gap-2 self-start rounded-full bg-ink px-4 text-sm font-medium text-white hover:bg-ink/85">
+            <Icon n="plus" className="size-4" />
             Přidat položku
           </button>
         ) : null}
@@ -55,47 +72,69 @@ export function ScheduleEditor({
           </p>
         ) : null}
 
-        {days.map((d) => (
-          <section key={d} className="flex flex-col gap-2">
-            <h2 className="font-display text-xl font-semibold tracking-tight first-letter:uppercase">{dayLabel(d)}</h2>
-            <ol className="divide-y divide-line border-y border-line">
-              {items
-                .filter((i) => local[i.id].date === d)
-                .map((i) =>
-                  editing === i.id ? (
-                    <li key={i.id} className="py-3">
-                      <ItemForm item={i} local={local[i.id]} vendors={vendors} onNewVendor={() => setVendorForm("new")} onDone={() => setEditing(null)} />
-                    </li>
-                  ) : (
-                    <li key={i.id} className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 py-3">
-                      <span className="tabular-nums">
-                        <span className="text-lg font-medium">{local[i.id].start}</span>
-                        {local[i.id].end ? <span className="block text-sm text-ink-soft">do {local[i.id].end}</span> : null}
-                      </span>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-medium">{i.title}</span>
-                        <span className="text-sm text-ink-soft">
-                          {[i.location, i.responsible_name, i.vendor_id ? vendorName.get(i.vendor_id) : null, i.contact].filter(Boolean).join(", ")}
-                        </span>
-                        {i.notes ? <span className="whitespace-pre-line text-sm">{i.notes}</span> : null}
-                        {canEdit ? (
-                          <span className="mt-1 flex gap-4 text-sm">
-                            <button type="button" onClick={() => setEditing(i.id)} className="text-ink-soft hover:text-ink">Upravit</button>
-                            <button type="button" onClick={() => start(() => deleteItem(i.id))} className="text-ink-soft hover:text-danger">Smazat</button>
-                          </span>
-                        ) : null}
-                      </div>
-                    </li>
-                  ),
-                )}
-            </ol>
-          </section>
-        ))}
+        {days.map((d) => {
+          const dayItems = items.filter((i) => local[i.id].date === d);
+          return (
+            <section key={d} className="flex flex-col gap-4">
+              {days.length > 1 ? <h2 className="font-serif text-2xl first-letter:uppercase">{dayLabel(d)}</h2> : null}
+              {PARTS.map((part) => {
+                const list = dayItems.filter((i) => partOf(local[i.id].start) === part.key);
+                if (!list.length) return null;
+                return (
+                  <div key={part.key} className="flex flex-col gap-3">
+                    <p className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-soft/80">
+                      {part.label}
+                      <span className="h-px flex-1 bg-line" />
+                    </p>
+                    <ol className="relative flex flex-col gap-3 before:absolute before:bottom-3 before:left-[4.95rem] before:top-3 before:w-px before:bg-line sm:before:left-[5.7rem]">
+                      {list.map((i) =>
+                        editing === i.id ? (
+                          <li key={i.id}>
+                            <ItemForm item={i} local={local[i.id]} vendors={vendors} onNewVendor={() => setVendorForm("new")} onDone={() => setEditing(null)} />
+                          </li>
+                        ) : (
+                          <li key={i.id} className="relative grid grid-cols-[4rem_1rem_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[4.5rem_1.5rem_minmax(0,1fr)] sm:gap-3">
+                            <div className="pt-3.5 text-right tabular-nums">
+                              <p className="font-display text-lg font-semibold leading-none sm:text-xl">{local[i.id].start}</p>
+                              {local[i.id].end ? <p className="mt-1 text-xs text-ink-soft">do {local[i.id].end}</p> : null}
+                            </div>
+                            <span className="relative z-10 mt-4 size-3.5 justify-self-center rounded-full bg-eucalyptus ring-4 ring-paper" />
+                            <article className="rounded-2xl border-l-[3px] border-eucalyptus bg-surface p-4 shadow-card ring-1 ring-line/70">
+                              <div className="flex items-start justify-between gap-3">
+                                <h3 className="text-[17px] font-semibold leading-snug">{i.title}</h3>
+                                {duration(i) ? <span className="shrink-0 rounded-full bg-eucalyptus-mist px-2.5 py-0.5 text-xs font-medium text-eucalyptus-deep">{duration(i)}</span> : null}
+                              </div>
+                              {i.location || i.responsible_name || i.vendor_id || i.contact ? (
+                                <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-ink-soft">
+                                  {i.location ? <span className="flex items-center gap-1.5"><Icon n="pin" className="size-4" />{i.location}</span> : null}
+                                  {i.responsible_name ? <span className="flex items-center gap-1.5"><Icon n="user" className="size-4" />{i.responsible_name}</span> : null}
+                                  {i.vendor_id && vendorName.get(i.vendor_id) ? <span className="flex items-center gap-1.5"><Icon n="shop" className="size-4" />{vendorName.get(i.vendor_id)}</span> : null}
+                                  {i.contact ? <span className="flex items-center gap-1.5"><Icon n="phone" className="size-4" />{i.contact}</span> : null}
+                                </div>
+                              ) : null}
+                              {i.notes ? <p className="mt-3 whitespace-pre-line rounded-lg bg-paper px-3 py-2 text-sm">{i.notes}</p> : null}
+                              {canEdit ? (
+                                <div className="mt-3 flex gap-4 border-t border-line pt-2.5 text-sm">
+                                  <button type="button" onClick={() => setEditing(i.id)} className="text-ink-soft hover:text-ink">Upravit</button>
+                                  <button type="button" onClick={() => start(() => deleteItem(i.id))} className="text-ink-soft hover:text-danger">Smazat</button>
+                                </div>
+                              ) : null}
+                            </article>
+                          </li>
+                        ),
+                      )}
+                    </ol>
+                  </div>
+                );
+              })}
+            </section>
+          );
+        })}
       </div>
 
-      <aside className="flex flex-col gap-8">
+      <aside className="flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start">
         <section className="flex flex-col gap-3 rounded-2xl bg-eucalyptus-mist p-5">
-          <h2 className="font-medium">Sdílení</h2>
+          <h2 className="flex items-center gap-2 font-medium"><Icon n="link" className="size-4" />Sdílení</h2>
           <p className="text-sm text-ink-soft">
             Odkaz pošlete svědkům nebo koordinátorce. Uvidí celý program s kontakty a v den svatby i to, co se děje právě teď. Nepotřebují účet.
           </p>
@@ -125,7 +164,7 @@ export function ScheduleEditor({
 
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-semibold tracking-tight">Dodavatelé</h2>
+            <h2 className="font-serif text-2xl">Dodavatelé</h2>
             {canEdit ? (
               <button type="button" onClick={() => setVendorForm("new")} className="text-sm font-medium text-eucalyptus-deep hover:underline">
                 Přidat
@@ -286,4 +325,23 @@ function VendorForm({ vendor, onDone }: { vendor: Vendor | null; onDone: () => v
       </div>
     </form>
   );
+}
+
+const PARTS = [
+  { key: "morning", label: "Dopoledne" },
+  { key: "afternoon", label: "Odpoledne" },
+  { key: "evening", label: "Večer" },
+] as const;
+
+function partOf(time: string): (typeof PARTS)[number]["key"] {
+  const h = Number(time.slice(0, 2));
+  return h >= 5 && h < 12 ? "morning" : h >= 12 && h < 17 ? "afternoon" : "evening";
+}
+
+function duration(i: ScheduleItem): string | null {
+  if (!i.ends_at) return null;
+  const m = Math.round((Date.parse(i.ends_at) - Date.parse(i.starts_at)) / 60_000);
+  if (m <= 0) return null;
+  const h = Math.floor(m / 60);
+  return h ? `${h} h${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`;
 }

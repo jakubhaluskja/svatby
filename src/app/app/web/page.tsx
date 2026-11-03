@@ -46,10 +46,10 @@ export default async function WebEditorPage() {
   const url = siteUrl(wedding.slug, appDomain());
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-12 px-6 py-10 sm:px-10">
+    <div className="flex max-w-4xl flex-col gap-12 px-6 py-8 sm:px-10 lg:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="font-display text-4xl font-semibold tracking-tight">Svatební web</h1>
+          <h1 className="font-serif text-4xl tracking-tight">Svatební web</h1>
           <p className="text-ink-soft">
             <a href={url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
               {url.replace(/^https?:\/\//, "")}
@@ -68,7 +68,7 @@ export default async function WebEditorPage() {
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="font-display text-2xl font-semibold tracking-tight">Sekce</h2>
+          <h2 className="font-serif text-2xl tracking-tight">Sekce</h2>
           <p className="text-sm text-ink-soft">Zapněte, co chcete hostům ukázat, a šipkami změňte pořadí.</p>
         </div>
         <SectionList
@@ -79,7 +79,7 @@ export default async function WebEditorPage() {
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h2 className="font-display text-2xl font-semibold tracking-tight">Plán B a zprávy v den svatby</h2>
+            <h2 className="font-serif text-2xl tracking-tight">Plán B a zprávy v den svatby</h2>
             <p className="text-sm text-ink-soft">Když bude pršet, přepněte na náhradní místo. Hosté to uvidí hned v programu i nahoře na webu.</p>
           </div>
           <Link href="/app/web/zpravy" className="inline-flex h-10 items-center rounded-full border border-line bg-surface px-5 text-sm font-medium hover:border-eucalyptus">
@@ -98,7 +98,7 @@ export default async function WebEditorPage() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">Vzhled a nastavení</h2>
+        <h2 className="font-serif text-2xl tracking-tight">Vzhled a nastavení</h2>
         <SettingsForm
           template={draft?.template ?? wedding.template}
           english={(w?.locales ?? []).includes("en")}
@@ -109,7 +109,7 @@ export default async function WebEditorPage() {
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="font-display text-2xl font-semibold tracking-tight">Soukromí</h2>
+          <h2 className="font-serif text-2xl tracking-tight">Soukromí</h2>
           <p className="text-sm text-ink-soft">Adresa a fotky jsou citlivé. Web můžete zamknout heslem.</p>
         </div>
         <PasswordForm

@@ -123,3 +123,65 @@ export function ShapeOutline({ shape, w, h, className, style }: { shape: ShapeId
     );
   return <rect x={-hw} y={-hh} width={w} height={h} rx={shape === "dancefloor" || shape === "stage" ? 6 : 10} className={className} style={style} />;
 }
+
+/** Natočení židle (ve stupních), aby byla čelem ke stolu. Výchozí židle hledí nahoru (−y). */
+export function seatFacing(shape: ShapeId, w: number, h: number, p: Pt): number {
+  const hw = w / 2;
+  const hh = h / 2;
+  const toward = (vx: number, vy: number) => (Math.atan2(vx, -vy) * 180) / Math.PI;
+  if (shape === "round" || shape === "oval") return toward(-p.x, -p.y);
+  const bar = 70;
+  if (shape === "t" && Math.abs(p.y) < hh + 1 && Math.abs(p.x) < hw + 1) {
+    // pod rameny hledí nahoru, podél nohy ke středu
+    if (Math.abs(p.y - (-hh + bar + 42)) < 1 && Math.abs(p.x) > bar / 2 + 43) return toward(0, -1);
+    return toward(-Math.sign(p.x), 0);
+  }
+  if (shape === "u" && Math.abs(p.y) < hh + 1 && Math.abs(p.x) < hw - 1) return toward(Math.sign(p.x), 0);
+  if (Math.abs(p.y) > hh) return toward(0, -Math.sign(p.y));
+  if (Math.abs(p.x) > hw) return toward(-Math.sign(p.x), 0);
+  return toward(-p.x, -p.y);
+}
+
+export type ChairState = "free" | "yes" | "pending" | "no";
+
+const CHAIR_STYLE: Record<ChairState, { seat: string; back: string; stroke: string; dash?: string }> = {
+  free: { seat: "#ffffff", back: "#eef2ef", stroke: "#c9d3cd" },
+  yes: { seat: "#e3ece7", back: "#c9d9d1", stroke: "#8faa9d" },
+  pending: { seat: "#f6ebf0", back: "#ead6e0", stroke: "#c9a3b5", dash: "5 4" },
+  no: { seat: "#f7e4e1", back: "#efcfca", stroke: "#a33a2f" },
+};
+
+/** Židle při pohledu shora: sedák a zaoblené opěradlo na straně od stolu. */
+export function ChairShape({ state, active }: { state: ChairState; active?: boolean }) {
+  const s = CHAIR_STYLE[state];
+  const stroke = active ? "#7b3f5c" : s.stroke;
+  const sw = active ? 4 : 2;
+  return (
+    <g filter="url(#chair-shadow)">
+      <rect x={-26} y={-24} width={52} height={47} rx={14} fill={s.seat} stroke={stroke} strokeWidth={sw} strokeDasharray={s.dash} />
+      <path d="M-29 19 Q0 31 29 19 L30 27 Q0 41 -30 27 Z" fill={s.back} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
+      {state === "free" ? <rect x={-16} y={-14} width={32} height={27} rx={9} fill="none" stroke="#e6ebe8" strokeWidth={1.5} /> : null}
+    </g>
+  );
+}
+
+/** Společné definice plátna: stíny a dřevěná podlaha parketu. */
+export function CanvasDefs() {
+  return (
+    <defs>
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <circle cx="2" cy="2" r="1.8" fill="#e2ddd3" />
+      </pattern>
+      <filter id="chair-shadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#1e2b26" floodOpacity="0.14" />
+      </filter>
+      <filter id="table-shadow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="10" stdDeviation="12" floodColor="#1e2b26" floodOpacity="0.13" />
+      </filter>
+      <pattern id="wood" width="36" height="36" patternUnits="userSpaceOnUse">
+        <rect width="36" height="36" fill="#efe7dc" />
+        <path d="M0 18h36M18 0v18M9 18v18M27 18v18" stroke="#e2d6c6" strokeWidth="1.5" />
+      </pattern>
+    </defs>
+  );
+}

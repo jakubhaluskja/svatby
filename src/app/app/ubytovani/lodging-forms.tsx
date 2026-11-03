@@ -14,7 +14,7 @@ export function LodgingForm({ lodging, onDone }: { lodging: Lodging | null; onDo
     if (state.ok) onDone();
   }, [state, onDone]);
   return (
-    <form action={action} className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+    <form action={action} className="flex flex-col gap-4 rounded-2xl bg-surface shadow-card ring-1 ring-line/70 p-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className={label}>
           Název

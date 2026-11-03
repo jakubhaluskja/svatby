@@ -12,9 +12,9 @@ export default async function NewHouseholdPage() {
   const book = await loadGuestBook(supabase, wedding.id, "00000000-0000-0000-0000-000000000000");
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10 sm:px-10">
+    <div className="flex max-w-3xl flex-col gap-8 px-6 py-8 sm:px-10 lg:py-10">
       <div className="flex flex-col gap-2">
-        <h1 className="font-display text-4xl font-semibold tracking-tight">Nová domácnost</h1>
+        <h1 className="font-serif text-4xl tracking-tight">Nová domácnost</h1>
         <p className="text-ink-soft">Lidé, kteří dostanou jednu pozvánku a odpovědí společně. Třeba manželé s dětmi.</p>
       </div>
       <HouseholdForm

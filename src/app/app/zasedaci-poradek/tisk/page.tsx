@@ -32,11 +32,11 @@ export default async function SeatingPrintPage({ searchParams }: Props) {
   const bg = photoUrl(data.layout.background_key);
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-12 px-6 py-10 sm:px-10 print:max-w-none print:gap-0 print:p-0">
+    <div className="flex max-w-5xl flex-col gap-12 px-6 py-8 sm:px-10 lg:py-10 print:max-w-none print:gap-0 print:p-0">
       <div className="flex flex-wrap items-end justify-between gap-4 print:hidden">
         <div className="flex flex-col gap-2">
           <Link href={`/app/zasedaci-poradek?udalost=${udalost}`} className="text-sm text-ink-soft hover:text-ink">Zpět na zasedací pořádek</Link>
-          <h1 className="font-display text-4xl font-semibold tracking-tight">Tisk: {data.event.name}</h1>
+          <h1 className="font-serif text-4xl tracking-tight">Tisk: {data.event.name}</h1>
           <p className="text-ink-soft">Plán sálu, seznam po stolech pro catering a abecední seznam ke vchodu. Každý začíná na nové stránce.</p>
         </div>
         <PrintButton />

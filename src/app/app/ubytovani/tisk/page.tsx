@@ -15,11 +15,11 @@ export default async function LodgingPrintPage() {
   const guest = new Map(data.guests.map((g) => [g.id, g]));
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-10 px-6 py-10 sm:px-10 print:max-w-none print:p-0">
+    <div className="flex max-w-4xl flex-col gap-10 px-6 py-8 sm:px-10 lg:py-10 print:max-w-none print:p-0">
       <div className="flex flex-wrap items-end justify-between gap-4 print:hidden">
         <div className="flex flex-col gap-2">
           <Link href="/app/ubytovani" className="text-sm text-ink-soft hover:text-ink">Zpět na ubytování</Link>
-          <h1 className="font-display text-4xl font-semibold tracking-tight">Seznam pro ubytovatele</h1>
+          <h1 className="font-serif text-4xl tracking-tight">Seznam pro ubytovatele</h1>
           <p className="text-ink-soft">Každé ubytování začíná na nové stránce, můžete ho poslat přímo provozovateli.</p>
         </div>
         <PrintButton />

@@ -12,7 +12,7 @@ export function MessageForm({ events, english, defaultUntil }: { events: { id: s
   }, [state]);
   const field = "rounded-lg border border-line bg-surface px-3.5 text-[15px] font-normal focus:border-eucalyptus focus:outline-none";
   return (
-    <form ref={form} action={action} className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-5">
+    <form ref={form} action={action} className="flex flex-col gap-5 rounded-2xl bg-surface shadow-card ring-1 ring-line/70 p-5">
       <div className={english ? "grid gap-4 sm:grid-cols-2" : ""}>
         <label className="flex flex-col gap-1.5 text-sm font-medium">
           Zpráva

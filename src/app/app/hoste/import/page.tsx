@@ -15,9 +15,9 @@ export default async function ImportPage() {
     .order("starts_at", { ascending: true, nullsFirst: false });
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10 sm:px-10">
+    <div className="flex max-w-3xl flex-col gap-8 px-6 py-8 sm:px-10 lg:py-10">
       <div className="flex flex-col gap-2">
-        <h1 className="font-display text-4xl font-semibold tracking-tight">Vložit hosty z Excelu</h1>
+        <h1 className="font-serif text-4xl tracking-tight">Vložit hosty z Excelu</h1>
         <p className="text-ink-soft">V Excelu nebo Tabulkách Google označte řádky s hosty, zkopírujte je a vložte sem.</p>
       </div>
       <ImportForm events={(events ?? []).map((e) => ({ id: e.id, name: tr(e.name) }))} />

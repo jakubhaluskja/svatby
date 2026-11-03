@@ -231,7 +231,7 @@ function ListEditor({
   return (
     <div className="flex flex-col gap-4">
       {items.map((item, i) => (
-        <div key={i} className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-4">
+        <div key={i} className="flex flex-col gap-4 rounded-xl bg-surface p-4 shadow-card ring-1 ring-line/70">
           {render(item, (patch) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x))))}
           <div className="flex gap-3 text-sm">
             <button type="button" disabled={i === 0} onClick={() => { const n = [...items]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; onChange(n); }} className="text-ink-soft hover:text-ink disabled:invisible">

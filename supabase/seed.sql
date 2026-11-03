@@ -31,6 +31,37 @@ insert into public.checklist_template_items (title, offset_days, sort) values
   ('{"cs":"Poslat hostům poděkování","en":"Send thank-you notes to guests"}',                          30, 270),
   ('{"cs":"Stáhnout všechny fotky z galerie","en":"Download all photos from the gallery"}',            120, 280);
 
+update public.checklist_template_items set category = case title ->> 'cs'
+    when 'Stanovit celkový rozpočet a kdo co platí' then 'planning'
+    when 'Sestavit první seznam hostů' then 'guests'
+    when 'Vybrat a rezervovat místo obřadu a hostiny' then 'vendors'
+    when 'Rezervovat fotografa' then 'vendors'
+    when 'Vybrat oddávajícího a zajistit termín na úřadě' then 'ceremony'
+    when 'Rezervovat catering' then 'vendors'
+    when 'Rezervovat hudbu (DJ nebo kapela)' then 'vendors'
+    when 'Založit svatební web' then 'web'
+    when 'Vybrat svatební šaty' then 'attire'
+    when 'Zajistit ubytování pro hosty' then 'guests'
+    when 'Objednat svatební oznámení' then 'guests'
+    when 'Rezervovat květinovou výzdobu' then 'vendors'
+    when 'Vybrat oblek pro ženicha' then 'attire'
+    when 'Rozeslat oznámení s odkazem na web' then 'guests'
+    when 'Objednat svatební dort' then 'vendors'
+    when 'Vybrat snubní prsteny' then 'attire'
+    when 'Domluvit kadeřnici a vizážistku' then 'vendors'
+    when 'Odevzdat doklady na matriku' then 'ceremony'
+    when 'Připomenout se hostům, kteří neodpověděli' then 'guests'
+    when 'Uzavřít RSVP a poslat počty cateringu' then 'guests'
+    when 'Dokončit zasedací pořádek' then 'guests'
+    when 'Sestavit harmonogram dne D a sdílet ho s dodavateli' then 'day'
+    when 'Doplatit zálohy dodavatelům' then 'vendors'
+    when 'Vytisknout QR kartičky galerie na stoly' then 'day'
+    when 'Připravit obálky s platbami pro dodavatele' then 'day'
+    when 'Užít si svatbu' then 'day'
+    when 'Poslat hostům poděkování' then 'guests'
+    when 'Stáhnout všechny fotky z galerie' then 'day'
+  end;
+
 insert into public.budget_template_categories (name, share, sort) values
   ('{"cs":"Místo konání","en":"Venue"}',               0.20, 10),
   ('{"cs":"Catering a nápoje","en":"Catering and drinks"}', 0.30, 20),

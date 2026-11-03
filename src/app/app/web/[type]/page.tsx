@@ -29,10 +29,10 @@ export default async function SectionPage({ params }: Props) {
   const label = SECTION_LABELS[section.type];
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10 sm:px-10">
+    <div className="flex max-w-3xl flex-col gap-8 px-6 py-8 sm:px-10 lg:py-10">
       <div className="flex flex-col gap-2">
         <Link href="/app/web" className="text-sm text-ink-soft hover:text-ink">Zpět na web</Link>
-        <h1 className="font-display text-4xl font-semibold tracking-tight">{label.cs}</h1>
+        <h1 className="font-serif text-4xl tracking-tight">{label.cs}</h1>
         <p className="text-ink-soft">
           {label.hint}
           {!section.enabled ? " Sekce je teď vypnutá, hosté ji neuvidí." : ""}

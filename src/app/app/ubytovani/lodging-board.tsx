@@ -105,7 +105,7 @@ export function LodgingBoard({ data, canEdit }: { data: LodgingData; canEdit: bo
               ) : (
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div className="flex flex-col">
-                    <h2 className="font-display text-2xl font-semibold tracking-tight">{l.name}</h2>
+                    <h2 className="font-serif text-2xl tracking-tight">{l.name}</h2>
                     <p className="text-sm text-ink-soft">
                       {[l.address, l.check_in_info.cs].filter(Boolean).join(". ")}
                     </p>
@@ -188,7 +188,7 @@ export function LodgingBoard({ data, canEdit }: { data: LodgingData; canEdit: bo
           ) : null}
         </div>
 
-        <aside className="flex max-h-[44rem] flex-col gap-3 overflow-hidden rounded-2xl border border-line bg-surface p-4 lg:sticky lg:top-6">
+        <aside className="flex max-h-[44rem] flex-col gap-3 overflow-hidden rounded-2xl bg-surface shadow-card ring-1 ring-line/70 p-4 lg:sticky lg:top-6">
           <div className="flex gap-1">
             {[
               [true, `Chtějí ubytování`],

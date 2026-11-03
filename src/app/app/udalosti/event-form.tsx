@@ -95,7 +95,7 @@ export function EventForm({ eventId, defaults, showEnglish }: { eventId: string 
         </span>
       </label>
 
-      <details className="rounded-xl border border-line bg-surface p-4" open={!!defaults.plan_b_location_name}>
+      <details className="rounded-xl bg-surface p-4 shadow-card ring-1 ring-line/70" open={!!defaults.plan_b_location_name}>
         <summary className="cursor-pointer font-medium">Plán B pro špatné počasí</summary>
         <div className="mt-4 flex flex-col gap-5">
           <p className="text-sm text-ink-soft">

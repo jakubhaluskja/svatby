@@ -7,7 +7,7 @@ export default function SignUpPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Založte si účet</h1>
+        <h1 className="font-serif text-3xl tracking-tight">Založte si účet</h1>
         <p className="text-ink-soft">Plánovač je zdarma. Platíte až ve chvíli, kdy web zveřejníte hostům.</p>
       </div>
       <SignUpForm />
