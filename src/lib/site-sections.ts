@@ -6,24 +6,26 @@ export type LText = z.infer<typeof L>;
 
 const photo = z.string().max(300).nullable().default(null);
 
+/** Vlastní nadpis sekce (prázdný = výchozí nadpis šablony). Texty sekcí jsou bohatý text (viz rich-text.ts). */
 export const SECTION_SCHEMAS = {
-  hero: z.object({ intro: L, photo }).default({}),
-  schedule: z.object({ intro: L }).default({}),
-  location: z.object({ text: L }).default({}),
-  story: z.object({ text: L, photos: z.array(z.string().max(300)).max(6).default([]) }).default({}),
-  dresscode: z.object({ text: L }).default({}),
-  accommodation: z.object({ text: L }).default({}),
-  gifts: z.object({ text: L, show_account: z.boolean().default(true) }).default({}),
-  faq: z.object({ items: z.array(z.object({ q: L, a: L })).max(30).default([]) }).default({}),
+  hero: z.object({ tagline: L, intro: L, photo }).default({}),
+  schedule: z.object({ title: L, intro: L }).default({}),
+  location: z.object({ title: L, text: L, photo }).default({}),
+  story: z.object({ title: L, text: L, photos: z.array(z.string().max(300)).max(6).default([]) }).default({}),
+  dresscode: z.object({ title: L, text: L }).default({}),
+  accommodation: z.object({ title: L, text: L }).default({}),
+  gifts: z.object({ title: L, text: L, show_account: z.boolean().default(true) }).default({}),
+  faq: z.object({ title: L, items: z.array(z.object({ q: L, a: L })).max(30).default([]) }).default({}),
   contacts: z
     .object({
+      title: L,
       items: z
         .array(z.object({ name: z.string().max(80).default(""), role: L, phone: z.string().max(40).default(""), email: z.string().max(120).default("") }))
         .max(10)
         .default([]),
     })
     .default({}),
-  rsvp: z.object({ intro: L }).default({}),
+  rsvp: z.object({ title: L, intro: L }).default({}),
 } as const;
 
 export type SectionType = keyof typeof SECTION_SCHEMAS;

@@ -17,7 +17,7 @@ export function Wizard({ appDomain }: { appDomain: string }) {
   const [date, setDate] = useState("");
   const [dateUnknown, setDateUnknown] = useState(false);
   const [place, setPlace] = useState("");
-  const [template, setTemplate] = useState<TemplateId>("modern");
+  const [template, setTemplate] = useState<TemplateId>("pozvanka");
   const [locale, setLocale] = useState<"cs" | "en">("cs");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);

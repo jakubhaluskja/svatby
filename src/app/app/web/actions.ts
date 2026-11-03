@@ -8,6 +8,7 @@ import { isTemplateId } from "@/lib/templates";
 import { requireUser, requireWedding } from "@/lib/wedding";
 import { zonedToUtcIso } from "@/lib/time";
 import { toIban } from "@/lib/payment-qr";
+import { sanitizeRich } from "@/lib/rich-text";
 
 async function loadDraft() {
   const wedding = await requireWedding();
@@ -29,40 +30,46 @@ async function saveDraft(sections: Section[], extra: Record<string, unknown> = {
 
 const typeSchema = z.enum(SECTION_TYPES as [SectionType, ...SectionType[]]);
 
-export async function toggleSection(type: string, enabled: boolean) {
-  const t = typeSchema.parse(type);
-  const { sections } = await loadDraft();
-  await saveDraft(sections.map((s) => (s.type === t && t !== "hero" ? { ...s, enabled } : s)) as Section[]);
-}
 
-export async function moveSection(type: string, direction: -1 | 1) {
-  const t = typeSchema.parse(type);
-  const { sections } = await loadDraft();
-  const i = sections.findIndex((s) => s.type === t);
-  const j = i + direction;
-  // Úvod zůstává vždy první.
-  if (i <= 0 || j <= 0 || j >= sections.length) return;
-  const next = [...sections];
-  [next[i], next[j]] = [next[j], next[i]];
-  await saveDraft(next);
-}
 
-export type SectionSaveResult = { ok?: boolean; error?: string };
+export type SiteSaveResult = { ok?: boolean; error?: string };
 
-export async function saveSection(type: string, content: unknown): Promise<SectionSaveResult> {
-  const t = typeSchema.safeParse(type);
-  if (!t.success) return { error: "Neznámá sekce." };
-  let parsed;
-  try {
-    parsed = parseSectionContent(t.data, content);
-  } catch {
-    return { error: "Obsah sekce není platný. Zkontrolujte délku textů." };
+const RICH_FIELDS = new Set(["text", "intro", "a"]);
+
+/** Vyčistí bohatý text ve všech jazycích (rekurzivně v položkách seznamů). */
+function cleanRich(value: unknown, key = ""): unknown {
+  if (Array.isArray(value)) return value.map((v) => cleanRich(v));
+  if (value && typeof value === "object") {
+    const o = value as Record<string, unknown>;
+    if (RICH_FIELDS.has(key) && typeof o.cs === "string") return { cs: sanitizeRich(String(o.cs)), en: sanitizeRich(String(o.en ?? "")) };
+    return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, cleanRich(v, k)]));
   }
-  const { sections } = await loadDraft();
-  await saveDraft(sections.map((s) => (s.type === t.data ? { ...s, content: parsed } : s)) as Section[]);
-  revalidatePath(`/app/web/${t.data}`);
+  return value;
+}
+
+/** Uloží celý koncept webu z editoru (sekce, pořadí, šablona). */
+export async function saveSite(raw: unknown, template: string): Promise<SiteSaveResult> {
+  if (!isTemplateId(template)) return { error: "Neznámá šablona." };
+  if (!Array.isArray(raw)) return { error: "Neplatná data." };
+  const sections: Section[] = [];
+  for (const item of raw as { type?: string; enabled?: boolean; content?: unknown }[]) {
+    const t = typeSchema.safeParse(item?.type);
+    if (!t.success) return { error: "Neznámá sekce." };
+    try {
+      const content = parseSectionContent(t.data, cleanRich(item.content ?? {}));
+      sections.push({ id: t.data, type: t.data, enabled: t.data === "hero" ? true : item.enabled !== false, content } as Section);
+    } catch {
+      return { error: "Některý text je moc dlouhý. Zkraťte ho prosím." };
+    }
+  }
+  try {
+    await saveDraft(normalizeSections(sections), { template });
+  } catch {
+    return { error: "Změny se nepodařilo uložit." };
+  }
   return { ok: true };
 }
+
 
 export type SettingsState = { ok?: boolean; error?: string };
 

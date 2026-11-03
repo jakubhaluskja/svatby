@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { getTemplate } from "@/lib/templates";
 
-/** Barvy a písmo šablony pro celý svatební web. */
+/** Obal svatebního webu: barvy šablony, lišta náhledu, oznámení. */
 export function SiteShell({ template, preview, previewText, children }: { template: string; preview: boolean; previewText: string; children: ReactNode }) {
   const t = getTemplate(template);
   const style = {
@@ -19,9 +19,9 @@ export function SiteShell({ template, preview, previewText, children }: { templa
   } as CSSProperties;
 
   return (
-    <div style={style} className="min-h-svh">
+    <div style={style} className="relative min-h-svh">
       {preview ? (
-        <p className="sticky top-0 z-10 bg-ink px-4 py-2 text-center text-sm text-white" style={{ fontFamily: "var(--font-sans)" }}>
+        <p className="sticky top-0 z-40 bg-ink px-4 py-2 text-center text-sm text-white" style={{ fontFamily: "var(--font-sans)" }}>
           {previewText}
         </p>
       ) : null}

@@ -16,6 +16,16 @@ async function shrink(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob"))), "image/jpeg", 0.85));
 }
 
+/** Zmenší a nahraje fotku webu, vrátí cestu v úložišti. */
+export async function uploadSitePhoto(weddingId: string, file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("type");
+  const blob = await shrink(file);
+  const path = `${weddingId}/${crypto.randomUUID()}.jpg`;
+  const { error } = await createClient().storage.from("site-media").upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
+  if (error) throw error;
+  return path;
+}
+
 export function PhotoUpload({
   weddingId,
   value,

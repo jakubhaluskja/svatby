@@ -1,6 +1,8 @@
 import { linkDomain } from "@/lib/domain";
 import { siteUrl } from "@/lib/hosts";
-import { normalizeSections, SECTION_LABELS, type Section } from "@/lib/site-sections";
+import { normalizeSections, type Section } from "@/lib/site-sections";
+import { getTemplate } from "@/lib/templates";
+import { richToPlain } from "@/lib/rich-text";
 import { createClient } from "@/lib/supabase/server";
 import { utcToZonedParts } from "@/lib/time";
 import { requireWedding } from "@/lib/wedding";
@@ -9,13 +11,12 @@ import { tr } from "@/lib/i18n";
 import { PasswordForm } from "./password-form";
 import { PlanBList } from "./plan-b";
 import { PublishButton } from "./publish-button";
-import { SectionList } from "./section-list";
 import { SettingsForm } from "./settings-form";
 
 export const metadata = { title: "Svatební web" };
 
 function hasText(value: unknown): boolean {
-  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "string") return richToPlain(value).trim().length > 0;
   if (Array.isArray(value)) return value.some(hasText);
   if (value && typeof value === "object") return Object.values(value).some(hasText);
   return false;
@@ -78,14 +79,19 @@ export default async function WebEditorPage() {
         </p>
       ) : null}
 
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="font-serif text-2xl tracking-tight">Sekce</h2>
-          <p className="text-sm text-ink-soft">Zapněte, co chcete hostům ukázat, a šipkami změňte pořadí.</p>
+      <section className="grid items-center gap-6 rounded-2xl bg-surface p-6 shadow-card ring-1 ring-line/70 sm:grid-cols-[1fr_auto] sm:p-8">
+        <div className="flex flex-col gap-2">
+          <h2 className="font-serif text-2xl tracking-tight">Úprava webu</h2>
+          <p className="text-ink-soft">
+            Šablona {getTemplate(draft?.template ?? wedding.template).name}. Texty a fotky upravíte přímo na webu, jako by ho četli hosté. Ukládá se samo.
+          </p>
+          <p className="text-sm text-ink-soft">
+            Vyplněno {sections.filter((x) => x.enabled && isFilled(x)).length} z {sections.filter((x) => x.enabled).length} zapnutých sekcí.
+          </p>
         </div>
-        <SectionList
-          items={sections.map((s) => ({ type: s.type, label: SECTION_LABELS[s.type].cs, hint: SECTION_LABELS[s.type].hint, enabled: s.enabled, filled: isFilled(s) }))}
-        />
+        <Link href="/app/web/editor" className="inline-flex h-12 items-center justify-center rounded-full bg-ink px-6 font-medium text-white hover:bg-ink/85">
+          Otevřít editor webu
+        </Link>
       </section>
 
       <section className="flex flex-col gap-4">

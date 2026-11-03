@@ -21,7 +21,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       >
         <div className="flex flex-col items-center gap-6">
           <PhoneFrame address="jana-a-petr.svatby.cz">
-            <SiteHero partner1="Jana" partner2="Petr" date="2027-06-12" place="Zámek Hrubá Skála" template="romantic" compact />
+            <SiteHero partner1="Jana" partner2="Petr" date="2027-06-12" place="Zámek Hrubá Skála" template="pozvanka" compact />
           </PhoneFrame>
           <p className="max-w-[18rem] text-center text-sm text-ink-soft">
             Takhle může vypadat váš svatební web. Založíte ho za pár minut.

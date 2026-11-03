@@ -1,11 +1,12 @@
-/** Šablony svatebního webu. Šablona mění jen vzhled, obsah zůstává. */
+/** Šablony svatebního webu. Šablona mění vzhled a rozložení, obsah zůstává. */
 
-export type TemplateId = "modern" | "romantic" | "minimal" | "boho" | "classic";
+export type TemplateId = "pozvanka" | "herbar" | "magazin" | "noc" | "folklor";
 
 export type Template = {
   id: TemplateId;
   name: string;
   description: string;
+  /** Barvy pro náhledy, výběr šablony a obecné prvky (heslo, chyby) */
   colors: { background: string; text: string; muted: string; accent: string; line: string };
   displayFont: string;
   displayStyle: "normal" | "italic";
@@ -13,61 +14,79 @@ export type Template = {
   bodyFont: string;
 };
 
+export const FONTS = {
+  script: "'Pinyon Script', cursive",
+  bodoni: "'Bodoni Moda', serif",
+  instrument: "'Instrument Serif', serif",
+  gloock: "'Gloock', serif",
+  hand: "'Caveat', cursive",
+  sans: "var(--font-geist-sans), system-ui, sans-serif",
+} as const;
+
 export const TEMPLATES: Template[] = [
   {
-    id: "modern",
-    name: "Moderní",
-    description: "Výrazné bezpatkové písmo, zelené tóny, hodně vzduchu.",
-    colors: { background: "#eef2ef", text: "#17211d", muted: "#55665e", accent: "#4f7263", line: "#cfd9d3" },
-    displayFont: "var(--font-display)",
-    displayStyle: "normal",
-    displayWeight: 600,
-    bodyFont: "var(--font-sans)",
-  },
-  {
-    id: "romantic",
-    name: "Romantická",
-    description: "Kurzíva, pudrové a vínové odstíny.",
-    colors: { background: "#f6ecee", text: "#3b2430", muted: "#7a5d69", accent: "#9c5b74", line: "#e6d3d8" },
-    displayFont: "var(--font-cormorant)",
-    displayStyle: "italic",
-    displayWeight: 500,
-    bodyFont: "var(--font-cormorant)",
-  },
-  {
-    id: "minimal",
-    name: "Minimalistická",
-    description: "Černá na bílé, tenké písmo, nic navíc.",
-    colors: { background: "#ffffff", text: "#151515", muted: "#6b6b6b", accent: "#151515", line: "#e5e5e5" },
-    displayFont: "var(--font-sans)",
-    displayStyle: "normal",
-    displayWeight: 300,
-    bodyFont: "var(--font-sans)",
-  },
-  {
-    id: "boho",
-    name: "Boho",
-    description: "Teplé zemité barvy a měkké patkové písmo.",
-    colors: { background: "#efe6da", text: "#3d3226", muted: "#76664f", accent: "#9a6b3f", line: "#dccdb9" },
-    displayFont: "var(--font-fraunces)",
+    id: "pozvanka",
+    name: "Pozvánka",
+    description: "Papírová pozvánka v obálce s voskovou pečetí, kaligrafie.",
+    colors: { background: "#d6d0c4", text: "#1f2a44", muted: "#59627a", accent: "#7d1d2c", line: "#c4bcae" },
+    displayFont: FONTS.script,
     displayStyle: "normal",
     displayWeight: 400,
-    bodyFont: "var(--font-sans)",
+    bodyFont: FONTS.instrument,
   },
   {
-    id: "classic",
-    name: "Klasická",
-    description: "Elegantní patkové písmo, tmavě modrá.",
-    colors: { background: "#fbfaf7", text: "#1f2433", muted: "#5a6074", accent: "#2e3d5c", line: "#e2e0d8" },
-    displayFont: "var(--font-cormorant)",
+    id: "herbar",
+    name: "Herbář",
+    description: "Lisované květiny na herbářových listech, ručně psané poznámky.",
+    colors: { background: "#e4e7dc", text: "#2b3a2a", muted: "#5f6d55", accent: "#8a4b2f", line: "#c9cfbd" },
+    displayFont: FONTS.gloock,
     displayStyle: "normal",
-    displayWeight: 500,
-    bodyFont: "var(--font-cormorant)",
+    displayWeight: 400,
+    bodyFont: FONTS.instrument,
+  },
+  {
+    id: "magazin",
+    name: "Magazín",
+    description: "Obálka módního časopisu, velký didot a červená.",
+    colors: { background: "#ffffff", text: "#141414", muted: "#5c5c5c", accent: "#c3122f", line: "#d9d9d9" },
+    displayFont: FONTS.bodoni,
+    displayStyle: "normal",
+    displayWeight: 400,
+    bodyFont: FONTS.instrument,
+  },
+  {
+    id: "noc",
+    name: "Hvězdná noc",
+    description: "Skutečná hvězdná obloha nad místem svatby, půlnoční modrá a zlatá.",
+    colors: { background: "#0f1733", text: "#ece6d8", muted: "#a9adbf", accent: "#d4b47c", line: "#2c3658" },
+    displayFont: FONTS.instrument,
+    displayStyle: "normal",
+    displayWeight: 400,
+    bodyFont: FONTS.instrument,
+  },
+  {
+    id: "folklor",
+    name: "Folklor",
+    description: "Vyšívané křížkové stehy jako na krojích, červená a modrá.",
+    colors: { background: "#f8f3ea", text: "#2a2320", muted: "#6b5f57", accent: "#b01e2d", line: "#e2d8c8" },
+    displayFont: FONTS.gloock,
+    displayStyle: "normal",
+    displayWeight: 400,
+    bodyFont: FONTS.instrument,
   },
 ];
 
+/** Původní šablony se mapují na nejbližší novou. */
+const LEGACY: Record<string, TemplateId> = { modern: "magazin", minimal: "magazin", romantic: "pozvanka", classic: "pozvanka", boho: "herbar" };
+
+export function templateId(id: string | null | undefined): TemplateId {
+  if (id && TEMPLATES.some((t) => t.id === id)) return id as TemplateId;
+  return (id && LEGACY[id]) || "pozvanka";
+}
+
 export function getTemplate(id: string | null | undefined): Template {
-  return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
+  const tid = templateId(id);
+  return TEMPLATES.find((t) => t.id === tid)!;
 }
 
 export function isTemplateId(id: string): id is TemplateId {

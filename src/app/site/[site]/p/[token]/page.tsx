@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LanguageSwitch } from "@/components/site/language-switch";
-import { SiteSections } from "@/components/site/site-sections";
+import { SiteView } from "@/components/site/site-view";
+import { buildSiteModel } from "@/lib/site-model";
 import { SiteShell } from "@/components/site/site-shell";
 import { householdByToken, householdRooms, householdTables, localizeEvents, pickLocale, resolveWedding, siteContent, siteNotices } from "@/lib/site";
 import { SiteNotices } from "@/components/site/site-notices";
@@ -39,10 +40,8 @@ export default async function HouseholdSite({ params, searchParams }: Props) {
   const [tables, rooms] = await Promise.all([householdTables(wedding, household, locale), householdRooms(household, locale)]);
   const notices = await siteNotices(wedding, events, locale, household.events.filter((e) => e.invited).map((e) => e.id));
 
-  return (
-    <SiteShell template={content.template} preview={wedding.preview} previewText={copy.preview}>
-      <SiteNotices notices={notices} />
-      {tables.length ? (
+  const model = await buildSiteModel(wedding, content, events, locale, {
+    banner: tables.length ? (
         <section className="flex flex-col items-center gap-2 px-6 py-6 text-center" style={{ background: "var(--site-line)" }}>
           <h2 className="text-sm" style={{ color: "var(--site-muted)" }}>{copy.yourTable}</h2>
           {[...new Set(tables.map((t) => t.event))].map((ev) => {
@@ -56,16 +55,8 @@ export default async function HouseholdSite({ params, searchParams }: Props) {
             );
           })}
         </section>
-      ) : null}
-      <div className="relative">
-        <LanguageSwitch locales={wedding.locales} current={locale} />
-        <SiteSections
-          wedding={wedding}
-          content={content}
-          events={events}
-          locale={locale}
-          rsvp={
-            invited ? (
+      ) : null,
+    rsvp: invited ? (
               <div className="flex flex-col gap-8">
                 {rooms.length ? (
                   <div className="flex flex-col gap-3 rounded-sm border px-5 py-5" style={{ borderColor: "var(--site-line)" }}>
@@ -113,9 +104,15 @@ export default async function HouseholdSite({ params, searchParams }: Props) {
                   />
                 )}
               </div>
-            ) : null
-          }
-        />
+            ) : null,
+  });
+
+  return (
+    <SiteShell template={content.template} preview={wedding.preview} previewText={copy.preview}>
+      <SiteNotices notices={notices} />
+      <div className="relative">
+        <LanguageSwitch locales={wedding.locales} current={locale} />
+        <SiteView template={content.template} model={model} locale={locale} />
       </div>
     </SiteShell>
   );

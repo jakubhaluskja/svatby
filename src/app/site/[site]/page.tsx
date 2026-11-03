@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LanguageSwitch } from "@/components/site/language-switch";
-import { SiteSections } from "@/components/site/site-sections";
+import { SiteView } from "@/components/site/site-view";
 import { SiteShell } from "@/components/site/site-shell";
 import { pickLocale, publicEvents, resolveWedding, siteAccess, siteContent, siteNotices } from "@/lib/site";
 import { SiteNotices } from "@/components/site/site-notices";
 import { siteCopy } from "@/lib/site-copy";
+import { buildSiteModel } from "@/lib/site-model";
 import { CodeForm } from "./code-form";
 import { PasswordGate } from "./password-gate";
 
@@ -39,24 +40,22 @@ export default async function WeddingSite({ params, searchParams }: Props) {
     );
   }
 
+  const model = await buildSiteModel(wedding, content, events, locale, {
+    hidden: access.hidden,
+    rsvp: (
+      <div className="flex flex-col items-center gap-4 text-center">
+        <p style={{ color: "var(--site-muted)" }}>{copy.codeIntro}</p>
+        <CodeForm site={site} locale={locale} />
+      </div>
+    ),
+  });
+
   return (
     <SiteShell template={content.template} preview={wedding.preview} previewText={copy.preview}>
       <SiteNotices notices={notices} />
       <div className="relative">
         <LanguageSwitch locales={wedding.locales} current={locale} />
-        <SiteSections
-          wedding={wedding}
-          content={content}
-          events={events}
-          locale={locale}
-          hidden={access.hidden}
-          rsvp={
-            <div className="flex flex-col items-center gap-4 text-center">
-              <p style={{ color: "var(--site-muted)" }}>{copy.codeIntro}</p>
-              <CodeForm site={site} locale={locale} />
-            </div>
-          }
-        />
+        <SiteView template={content.template} model={model} locale={locale} />
       </div>
     </SiteShell>
   );

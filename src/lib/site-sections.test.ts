@@ -19,13 +19,13 @@ describe("normalizeSections", () => {
     expect(s[0].type).toBe("hero");
     expect(s[0].enabled).toBe(true);
     expect(s[1].type).toBe("faq");
-    expect(s[1].content).toEqual({ items: [{ q: { cs: "Parkování?", en: "" }, a: { cs: "U statku.", en: "" } }] });
+    expect(s[1].content).toEqual({ title: { cs: "", en: "" }, items: [{ q: { cs: "Parkování?", en: "" }, a: { cs: "U statku.", en: "" } }] });
     expect(s.filter((x) => x.type === "faq")).toHaveLength(1);
   });
 
   it("poškozený obsah nahradí výchozím", () => {
     const s = normalizeSections([{ type: "gifts", content: { show_account: "ano" } }]);
-    expect(s.find((x) => x.type === "gifts")?.content).toEqual({ text: { cs: "", en: "" }, show_account: true });
+    expect(s.find((x) => x.type === "gifts")?.content).toEqual({ title: { cs: "", en: "" }, text: { cs: "", en: "" }, show_account: true });
   });
 });
 

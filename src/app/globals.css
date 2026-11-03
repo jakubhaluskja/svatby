@@ -46,3 +46,41 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Bohatý text svatebního webu */
+.site-rich > p + p {
+  margin-top: 0.85em;
+}
+.site-rich a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+/* Editor webu */
+.site-editable {
+  outline: 1px dashed transparent;
+  outline-offset: 6px;
+  border-radius: 2px;
+  cursor: text;
+  transition: outline-color 0.15s;
+}
+.site-editable:hover {
+  outline-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+.site-editable:focus {
+  outline: 2px solid #4f7263;
+}
+.site-editable:empty::before {
+  content: attr(data-placeholder);
+  opacity: 0.45;
+}
+.site-sec-edit:hover {
+  box-shadow: inset 0 0 0 2px #4f7263;
+}
+.mag-dropcap > p:first-child::first-letter {
+  float: left;
+  margin: 0.06em 0.12em 0 0;
+  font-family: "Bodoni Moda", serif;
+  font-size: 4.6em;
+  line-height: 0.8;
+}

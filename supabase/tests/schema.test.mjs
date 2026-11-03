@@ -63,6 +63,8 @@ await as('authenticated', owner.id);
 const [{ create_wedding: wid }] = await q(
   `select create_wedding('jana-a-petr', 'Jana', 'Petr', '2027-06-12', 'cs', 'modern', 'Zámek', 'Hlavní 1') `);
 check('svatba založena', !!wid);
+check('původní šablona převedena na novou', (await q(`select template from weddings where id=$1`, [wid]))[0].template === 'pozvanka');
+await expectError('neplatná šablona odmítnuta', () => q(`update site_pages set template='modern' where wedding_id=$1`, [wid]), 'site_pages_template_check');
 check('3 věkové kategorie', (await q(`select count(*)::int c from age_categories where wedding_id=$1`, [wid]))[0].c === 3);
 check('checklist ze šablony', (await q(`select count(*)::int c from tasks where wedding_id=$1`, [wid]))[0].c === 28);
 check('každý úkol ze šablony má kategorii', (await q(`select count(*)::int c from tasks where wedding_id=$1 and category is null`, [wid]))[0].c === 0);
@@ -224,10 +226,10 @@ await q(`insert into storage.objects (bucket_id, name) values ('site-media', $1)
 check('pár nahraje fotku do své složky', true);
 await expectError('nelze nahrát do cizí složky', () => q(`insert into storage.objects (bucket_id, name) values ('site-media', $1)`, ['00000000-0000-0000-0000-000000000000/x.jpg']), 'row-level security');
 await expectError('neplatná cesta odmítnuta', () => q(`insert into storage.objects (bucket_id, name) values ('site-media', 'bez-slozky.jpg')`), 'row-level security');
-await q(`update site_pages set sections = '[{"type":"hero","enabled":true,"content":{"intro":{"cs":"Ahoj"}}}]', template='boho' where wedding_id=$1 and state='draft'`, [wid]);
+await q(`update site_pages set sections = '[{"type":"hero","enabled":true,"content":{"intro":{"cs":"Ahoj"}}}]', template='herbar' where wedding_id=$1 and state='draft'`, [wid]);
 await q(`select publish_site($1)`, [wid]);
 const [pub] = await q(`select sections, template from site_pages where wedding_id=$1 and state='published'`, [wid]);
-check('zveřejnění zkopíruje koncept', pub.template === 'boho' && pub.sections[0].content.intro.cs === 'Ahoj');
+check('zveřejnění zkopíruje koncept', pub.template === 'herbar' && pub.sections[0].content.intro.cs === 'Ahoj');
 await as('authenticated', coorg.id);
 await expectError('spoluorganizátor bez práv nezveřejní', () => q(`select publish_site($1)`, [wid]), 'forbidden');
 

@@ -14,7 +14,12 @@
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource/bodoni-moda": "^5.3.0",
+    "@fontsource/caveat": "^5.3.0",
     "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/gloock": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0",
+    "@fontsource/pinyon-script": "^5.3.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.58.0",
     "exceljs": "^4.4.0",
