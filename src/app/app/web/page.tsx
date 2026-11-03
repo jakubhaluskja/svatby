@@ -1,4 +1,4 @@
-import { appDomain } from "@/lib/env";
+import { linkDomain } from "@/lib/domain";
 import { siteUrl } from "@/lib/hosts";
 import { normalizeSections, SECTION_LABELS, type Section } from "@/lib/site-sections";
 import { createClient } from "@/lib/supabase/server";
@@ -45,7 +45,7 @@ export default async function WebEditorPage() {
   const sections = normalizeSections(draft?.sections);
   const hasChanges =
     !!draft && (!published || JSON.stringify(draft.sections) !== JSON.stringify(published.sections) || draft.template !== published.template);
-  const url = siteUrl(wedding.slug, appDomain());
+  const url = siteUrl(wedding.slug, await linkDomain());
 
   return (
     <div className="flex max-w-4xl flex-col gap-12 px-6 py-8 sm:px-10 lg:py-10">

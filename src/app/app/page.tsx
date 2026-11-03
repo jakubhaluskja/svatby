@@ -1,8 +1,8 @@
+import { linkDomain } from "@/lib/domain";
 import Link from "next/link";
 import { daysUntil, formatWeddingDate } from "@/components/site/site-hero";
 import { Icon, type IconName } from "@/components/icons";
 import { Card, Eyebrow, FormMessage } from "@/components/ui";
-import { appDomain } from "@/lib/env";
 import { loadGuestBook } from "@/lib/guest-data";
 import { siteUrl } from "@/lib/hosts";
 import { createClient } from "@/lib/supabase/server";
@@ -61,6 +61,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   const answered = book.households.filter((h) => h.rsvp_submitted_at).sort((a, b) => b.rsvp_submitted_at!.localeCompare(a.rsvp_submitted_at!));
   const days = wedding.wedding_date ? daysUntil(wedding.wedding_date) : null;
   const firstName = (profile?.full_name ?? "").split(" ")[0];
+  const webUrl = siteUrl(wedding.slug, await linkDomain());
   const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
   return (
@@ -75,7 +76,7 @@ export default async function DashboardPage({ searchParams }: Props) {
             {firstName ? `, ${firstName}` : ""}
           </h1>
         </div>
-        <a href={siteUrl(wedding.slug, appDomain())} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 self-start rounded-full bg-surface px-4 text-sm font-medium ring-1 ring-line hover:ring-eucalyptus sm:self-auto">
+        <a href={webUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 self-start rounded-full bg-surface px-4 text-sm font-medium ring-1 ring-line hover:ring-eucalyptus sm:self-auto">
           <Icon n="eye" className="size-4" />
           {wedding.status === "published" ? "Otevřít web" : "Náhled webu"}
         </a>

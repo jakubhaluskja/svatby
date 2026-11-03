@@ -1,6 +1,6 @@
+import { linkDomain } from "@/lib/domain";
 import Link from "next/link";
 import QRCode from "qrcode";
-import { appDomain } from "@/lib/env";
 import { householdUrl, siteUrl } from "@/lib/hosts";
 import { createClient } from "@/lib/supabase/server";
 import { requireWedding } from "@/lib/wedding";
@@ -17,7 +17,7 @@ export default async function QrPage() {
     .eq("wedding_id", wedding.id)
     .order("sort");
 
-  const domain = appDomain();
+  const domain = await linkDomain();
   const site = siteUrl(wedding.slug, domain).replace(/^https?:\/\//, "");
   const codes = await Promise.all(
     (households ?? []).map(async (h) => ({

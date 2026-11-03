@@ -1,7 +1,7 @@
+import { linkDomain } from "@/lib/domain";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FormMessage } from "@/components/ui";
-import { appDomain } from "@/lib/env";
 import { guestName, guestStatus, loadGuestBook } from "@/lib/guest-data";
 import { householdUrl } from "@/lib/hosts";
 import { createClient } from "@/lib/supabase/server";
@@ -26,7 +26,7 @@ export default async function HouseholdPage({ params, searchParams }: Props) {
 
   const events = book.events.filter((e) => h.event_ids.includes(e.id));
   const category = new Map(book.categories.map((c) => [c.id, c.label]));
-  const url = householdUrl(wedding.slug, h.token, appDomain());
+  const url = householdUrl(wedding.slug, h.token, await linkDomain());
   const couple = `${wedding.partner1_name} a ${wedding.partner2_name}`;
   const message =
     h.locale === "en"
