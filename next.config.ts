@@ -9,6 +9,11 @@ const supabaseHost = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Navigace zpět na už navštívenou stránku je okamžitá; akce s revalidatePath cache zneplatní.
+    staleTimes: { dynamic: 30 },
+    optimizePackageImports: ["@supabase/supabase-js", "zod"],
+  },
   images: {
     remotePatterns: [{ protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }],
   },

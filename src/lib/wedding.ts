@@ -19,13 +19,13 @@ export type CurrentWedding = {
 };
 
 /** Přihlášený uživatel, nebo přesměrování na přihlášení. */
-export const requireUser = cache(async () => {
+export const requireUser = cache(async (): Promise<{ id: string; email: string | null }> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/prihlaseni");
-  return user;
+  // Ověření podpisu tokenu bez dalšího dotazu na server (při symetrickém klíči se zeptá serveru).
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) redirect("/prihlaseni");
+  return { id: claims.sub, email: (claims.email as string | undefined) ?? null };
 });
 
 /** Svatba, ke které má uživatel přístup (jedna na účet). */
@@ -60,6 +60,9 @@ export type ModuleName = "guests" | "web" | "seating" | "lodging" | "checklist" 
 
 /** Úroveň přístupu přihlášeného uživatele k modulu: none / read / write / own. */
 export async function moduleLevel(weddingId: string, module: ModuleName): Promise<"none" | "read" | "write" | "own"> {
+  // Novomanželé mohou vždy vše (stejně jako app.module_level v databázi) – bez dalšího dotazu.
+  const current = await getCurrentWedding();
+  if (current?.id === weddingId && current.role !== "coorganizer") return "write";
   const supabase = await createClient();
   const { data } = await supabase.rpc("my_module_level", { p_wedding_id: weddingId, p_module: module });
   return (data as "none" | "read" | "write" | "own" | null) ?? "none";
