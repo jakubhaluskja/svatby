@@ -60,12 +60,13 @@ const roomSchema = z.object({
     .refine((v) => v === null || (Number.isFinite(v) && v >= 0), "Cena musí být číslo."),
   currency: z.enum(["CZK", "EUR"]),
   paid_by: z.enum(["guest", "couple"]),
+  nights: z.coerce.number().int().min(1, "Aspoň 1 noc.").max(14, "Nejvýš 14 nocí."),
   notes: text(300),
 });
 
 export async function saveRoom(lodgingId: string, roomId: string | null, _: FormState, formData: FormData): Promise<FormState> {
   const wedding = await requireWedding();
-  const parsed = roomSchema.safeParse(Object.fromEntries(["name", "capacity", "price", "currency", "paid_by", "notes"].map((k) => [k, String(formData.get(k) ?? "")])));
+  const parsed = roomSchema.safeParse(Object.fromEntries(["name", "capacity", "price", "currency", "paid_by", "nights", "notes"].map((k) => [k, String(formData.get(k) ?? (k === "nights" ? "1" : ""))])));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const supabase = await createClient();
   const { error } = roomId
@@ -73,6 +74,7 @@ export async function saveRoom(lodgingId: string, roomId: string | null, _: Form
     : await supabase.from("rooms").insert({ ...parsed.data, lodging_id: uuid.parse(lodgingId), wedding_id: wedding.id, sort: Date.now() % 1_000_000 });
   if (error) return { error: "Pokoj se nepodařilo uložit." };
   revalidatePath("/app/ubytovani");
+  revalidatePath("/app/rozpocet");
   return { ok: true };
 }
 

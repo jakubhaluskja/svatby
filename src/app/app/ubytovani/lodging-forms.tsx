@@ -74,7 +74,11 @@ export function RoomForm({ lodgingId, room, onDone }: { lodgingId: string; room:
             </select>
           </span>
         </label>
-        <label className={`${label} col-span-2`}>
+        <label className={label}>
+          Nocí
+          <input name="nights" type="number" min={1} max={14} required defaultValue={room?.nights ?? 1} className={field} />
+        </label>
+        <label className={label}>
           Kdo platí
           <select name="paid_by" defaultValue={room?.paid_by ?? "guest"} className={field}>
             <option value="guest">Hosté sami</option>

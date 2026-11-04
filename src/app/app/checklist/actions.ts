@@ -16,7 +16,7 @@ const schema = z.object({
   assignee: z.string(),
   assignee_name: z.string().trim().max(80),
   assignee_email: z.union([z.literal(""), z.string().trim().email("E-mail odpovědné osoby není platný.")]),
-  category: z.union([z.literal(""), z.enum(["planning", "guests", "vendors", "attire", "ceremony", "web", "day"])]),
+  category: z.union([z.literal(""), z.enum(["planning", "guests", "vendors", "attire", "ceremony", "web", "day", "payments"])]),
 });
 
 export async function saveTask(taskId: string | null, parentId: string | null, _: TaskFormState, formData: FormData): Promise<TaskFormState> {

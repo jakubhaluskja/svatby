@@ -8,6 +8,7 @@ export type Room = {
   name: string;
   capacity: number;
   price: number | null;
+  nights: number;
   currency: "CZK" | "EUR";
   paid_by: "guest" | "couple";
   notes: string | null;
@@ -45,7 +46,7 @@ export async function loadLodging(db: SupabaseClient, weddingId: string): Promis
   const [book, { data: lodgings }, { data: rooms }, { data: assignments }] = await Promise.all([
     loadGuestBook(db, weddingId),
     db.from("lodgings").select("id, name, address, url, check_in_info, sort").eq("wedding_id", weddingId).order("sort"),
-    db.from("rooms").select("id, lodging_id, name, capacity, price, currency, paid_by, notes, sort").eq("wedding_id", weddingId).order("sort"),
+    db.from("rooms").select("id, lodging_id, name, capacity, price, currency, paid_by, nights, notes, sort").eq("wedding_id", weddingId).order("sort"),
     db.from("room_assignments").select("guest_id, room_id").eq("wedding_id", weddingId),
   ]);
 

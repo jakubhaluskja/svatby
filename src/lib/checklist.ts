@@ -23,6 +23,7 @@ export const TASK_CATEGORIES = {
   ceremony: { label: "Obřad", bg: "#efe6f3", fg: "#5e3f7b" },
   web: { label: "Web", bg: "#e5e9f2", fg: "#36466b" },
   day: { label: "Den D", bg: "#f5eedb", fg: "#7a5f1f" },
+  payments: { label: "Platby", bg: "#e8eef6", fg: "#2e4a74" },
 } as const;
 export type TaskCategory = keyof typeof TASK_CATEGORIES;
 

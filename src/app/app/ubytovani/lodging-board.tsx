@@ -275,7 +275,7 @@ function RoomCard({
           <span className="font-medium">{room.name}</span>
           <span className="text-sm text-ink-soft">
             {guests.length}/{room.capacity} lůžek
-            {room.price !== null ? `, ${money(room.price, room.currency)} za noc` : ""}
+            {room.price !== null ? `, ${money(room.price, room.currency)} za noc${room.nights > 1 ? `, ${room.nights} ${room.nights < 5 ? "noci" : "nocí"}` : ""}` : ""}
             {room.paid_by === "couple" ? ", platíme my" : ""}
           </span>
         </div>

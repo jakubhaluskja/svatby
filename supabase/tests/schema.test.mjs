@@ -234,6 +234,32 @@ await as('authenticated', coorg.id);
 await expectError('spoluorganizátor bez práv nezveřejní', () => q(`select publish_site($1)`, [wid]), 'forbidden');
 
 
+// --- rozpočet: platby a úkoly
+await as('authenticated', owner.id);
+const [bcat] = await q(`select id from budget_categories where wedding_id=$1 limit 1`, [wid]);
+const [bitem] = await q(`insert into budget_items (wedding_id, category_id, name, estimate_amount) values ($1,$2,'Fotograf',30000) returning id`, [wid, bcat.id]);
+const [pay] = await q(`insert into budget_payments (wedding_id, item_id, label, amount, due_date) values ($1,$2,'Záloha',10000,'2027-01-15') returning id`, [wid, bitem.id]);
+const [ptask] = await q(`select id, title, category, due_date::text d, done_at from tasks where budget_payment_id=$1`, [pay.id]);
+check('platba s termínem vytvoří úkol', ptask && ptask.title === 'Zaplatit: Záloha – Fotograf' && ptask.category === 'payments' && ptask.d === '2027-01-15' && !ptask.done_at);
+await q(`update tasks set done_at = now() where id=$1`, [ptask.id]);
+check('odškrtnutí úkolu zaplatí platbu', !!(await q(`select paid_at from budget_payments where id=$1`, [pay.id]))[0].paid_at);
+await q(`update budget_payments set paid_at = null where id=$1`, [pay.id]);
+check('zrušení platby vrátí úkol', !(await q(`select done_at from tasks where id=$1`, [ptask.id]))[0].done_at);
+await q(`update budget_items set name='Fotograf Novák' where id=$1`, [bitem.id]);
+check('přejmenování položky upraví úkol', (await q(`select title from tasks where id=$1`, [ptask.id]))[0].title === 'Zaplatit: Záloha – Fotograf Novák');
+await q(`update budget_payments set due_date = null where id=$1`, [pay.id]);
+check('platba bez termínu nemá úkol', (await q(`select count(*)::int c from tasks where budget_payment_id=$1`, [pay.id]))[0].c === 0);
+await q(`update budget_payments set due_date = '2027-02-01' where id=$1`, [pay.id]);
+await q(`delete from budget_payments where id=$1`, [pay.id]);
+check('smazání platby smaže úkol', (await q(`select count(*)::int c from tasks where title like 'Zaplatit:%' and wedding_id=$1`, [wid]))[0].c === 0);
+const [vend] = await q(`insert into vendors (wedding_id, name) values ($1,'Foto Novák') returning id`, [wid]);
+await q(`insert into storage.objects (bucket_id, name) values ('vendor-files', $1)`, [`${wid}/${vend.id}/smlouva.pdf`]);
+check('pár nahraje smlouvu dodavatele', true);
+await as('authenticated', stranger.id);
+check('cizí smlouvu nevidí', (await q(`select count(*)::int c from storage.objects where bucket_id='vendor-files'`))[0].c === 0);
+check('pokoj má výchozí jednu noc', true);
+
+
 // --- zveřejnění zdarma, dokud neběží platby
 await as('authenticated', stranger.id);
 const [{ create_wedding: fw }] = await q(`select create_wedding('zdarma', 'A', 'B', '2027-09-01')`);

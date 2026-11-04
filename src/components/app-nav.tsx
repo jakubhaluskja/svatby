@@ -15,6 +15,7 @@ const GROUPS: { label: string | null; items: Item[] }[] = [
     items: [
       { href: "/app/checklist", label: "Checklist", icon: "check", badge: "tasks" },
       { href: "/app/harmonogram", label: "Harmonogram", icon: "clock" },
+      { href: "/app/rozpocet", label: "Rozpočet", icon: "wallet" },
     ],
   },
   {
