@@ -24,6 +24,8 @@ export default async function HouseholdPage({ params, searchParams }: Props) {
   const h = book.households[0];
   if (!h) notFound();
 
+  const { data: inv } = await supabase.from("households").select("invited_at").eq("id", h.id).maybeSingle();
+  const invitedAt = inv?.invited_at ?? null;
   const events = book.events.filter((e) => h.event_ids.includes(e.id));
   const category = new Map(book.categories.map((c) => [c.id, c.label]));
   const url = householdUrl(wedding.slug, h.token, await linkDomain());
@@ -54,7 +56,7 @@ export default async function HouseholdPage({ params, searchParams }: Props) {
 
       {ulozeno ? <FormMessage tone="info">Změny jsou uložené.</FormMessage> : null}
 
-      <LinkPanel householdId={h.id} url={url} shortCode={h.short_code} message={message} />
+      <LinkPanel householdId={h.id} url={url} shortCode={h.short_code} message={message} email={h.email} invited={!!invitedAt} />
 
       <section className="flex flex-col gap-4">
         <h2 className="font-serif text-2xl tracking-tight">Účast</h2>

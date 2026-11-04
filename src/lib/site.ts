@@ -26,7 +26,7 @@ export type PublicWedding = {
 };
 
 const FIELDS =
-  "id, slug, partner1_name, partner2_name, wedding_date, timezone, default_locale, locales, template, status, web_expires_at, password_scope, rsvp_deadline";
+  "id, slug, partner1_name, partner2_name, wedding_date, timezone, default_locale, locales, template, status, web_expires_at, password_scope, rsvp_deadline, suspended_at";
 
 /** Parametr route /site/[site]: slug, nebo hostname vlastní domény (obsahuje tečku). */
 export function isCustomDomainParam(site: string): boolean {
@@ -53,7 +53,7 @@ export const resolveWedding = cache(async (siteParam: string): Promise<PublicWed
   const { data: w } = await (weddingId ? query.eq("id", weddingId) : query.eq("slug", site)).maybeSingle();
   if (!w || w.status === "deleted") return null;
 
-  const live = w.status === "published" && (!w.web_expires_at || new Date(w.web_expires_at) > new Date());
+  const live = w.status === "published" && !w.suspended_at && (!w.web_expires_at || new Date(w.web_expires_at) > new Date());
   if (live) return { ...w, preview: false } as PublicWedding;
   if (await isMemberOf(w.id)) return { ...w, preview: true } as PublicWedding;
   return null;

@@ -16,7 +16,7 @@ create role anon nologin; create role authenticated nologin; create role service
 create schema auth; create schema extensions;
 grant usage on schema public, auth, extensions, storage to anon, authenticated, service_role;
 grant all on storage.objects to authenticated;
-create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}');
+create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}', last_sign_in_at timestamptz);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.sub', true), '')::uuid $$;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 create function extensions.gen_random_bytes(n int) returns bytea language plpgsql volatile as $$
@@ -310,6 +310,51 @@ await q(`insert into storage.objects (bucket_id, name) values ('site-media', $1)
 check('pár nahraje půdorys', true);
 await as('authenticated', coorg.id);
 await expectError('spoluorganizátor bez práv neuloží plátno', () => q(`select save_layout($1, '[]'::jsonb)`, [ev2.id]), 'forbidden');
+
+
+// --- administrace platformy a pozastavení služby
+await as('postgres');
+const [boss] = await q(`insert into auth.users (email) values ('admin@x.cz') returning id`);
+await q(`insert into platform_admins (user_id, role) values ($1, 'superadmin')`, [boss.id]);
+await as('authenticated', owner.id);
+await expectError('pár nevidí seznam klientů', () => q(`select * from admin_clients()`), 'forbidden');
+await expectError('pár si nepozastaví svatbu', () => q(`select admin_set_suspension($1, null)`, [wid]), 'forbidden');
+check('pár není správce', (await q(`select am_platform_admin() r`))[0].r === null);
+await as('authenticated', boss.id);
+check('správce je superadmin', (await q(`select am_platform_admin() r`))[0].r === 'superadmin');
+const clients = await q(`select * from admin_clients()`);
+const mine = clients.find((c) => c.id === wid);
+check('správce vidí klienty s vlastníkem', mine?.owner_email === 'jana@x.cz' && mine.households > 0, JSON.stringify(mine ?? {}));
+await q(`select admin_update_wedding($1, '{"partner2_name":"Petr B.","admin_note":"VIP"}'::jsonb)`, [wid]);
+check('správce upraví údaje', (await q(`select partner2_name, admin_note from weddings where id=$1`, [wid]))[0].admin_note === 'VIP');
+await q(`select admin_set_suspension($1, 'nonpayment', 'Faktura 12')`, [wid]);
+check('svatba pozastavena', (await q(`select suspended_reason from weddings where id=$1`, [wid]))[0].suspended_reason === 'nonpayment');
+check('akce správce v auditu', (await q(`select count(*)::int c from audit_log where wedding_id=$1 and action like 'admin.%'`, [wid]))[0].c === 2);
+await as('authenticated', owner.id);
+check('pozastavený pár data vidí', (await q(`select count(*)::int c from households where wedding_id=$1`, [wid]))[0].c > 0);
+check('úroveň přístupu je jen čtení', (await q(`select my_module_level($1, 'guests') l`, [wid]))[0].l === 'read');
+await expectError('pozastavený pár nic nepřidá', () => q(`insert into tasks (wedding_id, title) values ($1, 'x')`, [wid]), 'row-level');
+const suspUpd = await q(`update weddings set partner1_name='X' where id=$1 returning id`, [wid]);
+check('pozastavený pár nezmění svatbu', suspUpd.length === 0);
+await q(`update weddings set suspended_at=null, suspended_reason=null where id=$1`, [wid]);
+check('pár pozastavení nezruší', (await q(`select suspended_at from weddings where id=$1`, [wid]))[0].suspended_at !== null);
+await as('authenticated', boss.id);
+await q(`select admin_set_suspension($1, null)`, [wid]);
+await as('authenticated', owner.id);
+check('po obnovení pár zase zapisuje', (await q(`select my_module_level($1, 'guests') l`, [wid]))[0].l === 'write');
+await q(`update weddings set partner2_name='Petr' where id=$1`, [wid]);
+
+
+// --- e-maily: upozornění na úkoly
+await as('authenticated', owner.id);
+const [rt] = await q(`insert into tasks (wedding_id, title, due_date) values ($1, 'Dort', '2027-01-10') returning id`, [wid]);
+await as('postgres');
+await q(`update tasks set reminded_at = now() where id=$1`, [rt.id]);
+await as('authenticated', owner.id);
+await q(`update tasks set title='Dort!' where id=$1`, [rt.id]);
+check('přejmenování upozornění neruší', (await q(`select reminded_at from tasks where id=$1`, [rt.id]))[0].reminded_at !== null);
+await q(`update tasks set due_date='2027-01-20' where id=$1`, [rt.id]);
+check('nový termín = nové upozornění', (await q(`select reminded_at from tasks where id=$1`, [rt.id]))[0].reminded_at === null);
 
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);

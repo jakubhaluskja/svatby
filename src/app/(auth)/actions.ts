@@ -1,6 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { IMPERSONATION_COOKIE } from "@/lib/admin";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requestOrigin, safeNext } from "@/lib/origin";
@@ -106,6 +108,10 @@ export async function updatePassword(_: AuthState, formData: FormData): Promise<
 
 export async function signOut() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  // Při přihlášení za klienta odhlásit jen tuto relaci, ne všechna zařízení klienta.
+  const store = await cookies();
+  const impersonating = store.has(IMPERSONATION_COOKIE);
+  store.delete(IMPERSONATION_COOKIE);
+  await supabase.auth.signOut(impersonating ? { scope: "local" } : undefined);
   redirect("/prihlaseni");
 }

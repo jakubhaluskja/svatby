@@ -36,10 +36,11 @@ export type SidebarProps = {
   userName: string;
   userRole: string;
   badges: { tasks: number; guests: number };
+  isAdmin?: boolean;
   signOut: () => Promise<void>;
 };
 
-function NavList({ badges, onNavigate }: { badges: SidebarProps["badges"]; onNavigate?: () => void }) {
+function NavList({ badges, isAdmin, onNavigate }: { badges: SidebarProps["badges"]; isAdmin?: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Moduly" className="flex flex-col gap-5">
@@ -69,6 +70,12 @@ function NavList({ badges, onNavigate }: { badges: SidebarProps["badges"]; onNav
           })}
         </div>
       ))}
+      {isAdmin ? (
+        <Link href="/admin" onClick={onNavigate} className="flex h-10 items-center gap-3 rounded-xl px-3 text-[15px] text-plum hover:bg-plum/8">
+          <Icon n="shield" />
+          Administrace platformy
+        </Link>
+      ) : null}
     </nav>
   );
 }
@@ -149,7 +156,7 @@ export function Sidebar(props: SidebarProps) {
               <WeddingCard couple={props.couple} dateLine={props.dateLine} />
             </div>
             <div className="mt-5 px-3 pb-6">
-              <NavList badges={props.badges} onNavigate={() => setOpen(false)} />
+              <NavList badges={props.badges} isAdmin={props.isAdmin} onNavigate={() => setOpen(false)} />
             </div>
             <div className="mt-auto">
               <UserBox userName={props.userName} userRole={props.userRole} signOut={props.signOut} />
@@ -165,7 +172,7 @@ export function Sidebar(props: SidebarProps) {
           <WeddingCard couple={props.couple} dateLine={props.dateLine} />
         </div>
         <div className="mt-5 flex-1 overflow-y-auto px-3 pb-6">
-          <NavList badges={props.badges} />
+          <NavList badges={props.badges} isAdmin={props.isAdmin} />
         </div>
         <UserBox userName={props.userName} userRole={props.userRole} signOut={props.signOut} />
       </aside>

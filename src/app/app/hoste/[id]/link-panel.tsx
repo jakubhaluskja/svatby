@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { regenerateLink } from "../actions";
 
@@ -8,11 +9,15 @@ export function LinkPanel({
   url,
   shortCode,
   message,
+  email,
+  invited,
 }: {
   householdId: string;
   url: string;
   shortCode: string;
   message: string;
+  email: string | null;
+  invited: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -47,6 +52,14 @@ export function LinkPanel({
         <button type="button" onClick={copy} className="h-10 rounded-full bg-eucalyptus px-5 text-sm font-medium text-white hover:bg-eucalyptus-deep">
           {copied ? "Zkopírováno" : "Kopírovat odkaz"}
         </button>
+        {email ? (
+          <Link
+            href={`/app/hoste/emaily?druh=${invited ? "pripominky" : "pozvanky"}&domacnost=${householdId}`}
+            className="inline-flex h-10 items-center rounded-full border border-line bg-surface px-5 text-sm font-medium hover:border-eucalyptus"
+          >
+            {invited ? "Připomenout e-mailem" : "Poslat pozvánku e-mailem"}
+          </Link>
+        ) : null}
         <a href={url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center rounded-full border border-line bg-surface px-5 text-sm font-medium hover:border-eucalyptus">
           Zobrazit jako host
         </a>

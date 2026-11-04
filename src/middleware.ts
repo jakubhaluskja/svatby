@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
   // Bez přihlašovací cookie není co obnovovat (hosté, veřejné stránky) – žádný dotaz na Supabase.
   const hasSession = request.cookies.getAll().some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"));
   if (!hasSession) {
-    if (url.pathname.startsWith("/app")) {
+    if (url.pathname.startsWith("/app") || url.pathname.startsWith("/admin")) {
       const login = request.nextUrl.clone();
       login.pathname = "/prihlaseni";
       login.search = "";
@@ -65,8 +65,8 @@ async function refreshSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims?.sub ?? null;
 
-  // Administrace páru vyžaduje přihlášení.
-  if (!user && request.nextUrl.pathname.startsWith("/app")) {
+  // Aplikace páru i administrace platformy vyžadují přihlášení.
+  if (!user && (request.nextUrl.pathname.startsWith("/app") || request.nextUrl.pathname.startsWith("/admin"))) {
     const login = request.nextUrl.clone();
     login.pathname = "/prihlaseni";
     login.searchParams.set("next", request.nextUrl.pathname);

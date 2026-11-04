@@ -15,6 +15,9 @@ export type CurrentWedding = {
   template: string;
   status: "draft" | "published" | "expired" | "deleted";
   package: "none" | "web" | "web_gallery";
+  /** Služba pozastavená správcem platformy – vše jen ke čtení. */
+  suspended_at: string | null;
+  suspended_reason: "nonpayment" | "violation" | "other" | null;
   role: MemberRole;
 };
 
@@ -35,7 +38,7 @@ export const getCurrentWedding = cache(async (): Promise<CurrentWedding | null> 
   const { data } = await supabase
     .from("wedding_members")
     .select(
-      "role, weddings!inner(id, slug, partner1_name, partner2_name, wedding_date, default_locale, template, status, package)",
+      "role, weddings!inner(id, slug, partner1_name, partner2_name, wedding_date, default_locale, template, status, package, suspended_at, suspended_reason)",
     )
     .eq("user_id", user.id)
     .not("accepted_at", "is", null)
@@ -62,7 +65,7 @@ export type ModuleName = "guests" | "web" | "seating" | "lodging" | "checklist" 
 export async function moduleLevel(weddingId: string, module: ModuleName): Promise<"none" | "read" | "write" | "own"> {
   // Novomanželé mohou vždy vše (stejně jako app.module_level v databázi) – bez dalšího dotazu.
   const current = await getCurrentWedding();
-  if (current?.id === weddingId && current.role !== "coorganizer") return "write";
+  if (current?.id === weddingId && current.role !== "coorganizer") return current.suspended_at ? "read" : "write";
   const supabase = await createClient();
   const { data } = await supabase.rpc("my_module_level", { p_wedding_id: weddingId, p_module: module });
   return (data as "none" | "read" | "write" | "own" | null) ?? "none";

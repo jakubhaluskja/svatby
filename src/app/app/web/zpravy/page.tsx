@@ -28,7 +28,11 @@ export default async function MessagesPage() {
         <h1 className="font-serif text-4xl tracking-tight">Zprávy hostům</h1>
         <p className="text-ink-soft">
           Krátké zprávy, které se hostům v daný čas ukážou nahoře na webu. Třeba „Obřad začíná za 30 minut“ nebo „Autobus odjíždí od kostela v 17:00“.
-          Můžete si je připravit dopředu.
+          Můžete si je připravit dopředu. Zprávu e-mailem pošlete v{" "}
+          <Link href="/app/hoste/emaily?druh=zprava" className="text-ink underline underline-offset-2">
+            E-mailech hostům
+          </Link>
+          .
         </p>
       </div>
 

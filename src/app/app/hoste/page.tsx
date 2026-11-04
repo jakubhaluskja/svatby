@@ -45,6 +45,9 @@ export default async function GuestsPage({ searchParams }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/app/hoste/emaily" className="inline-flex h-11 items-center rounded-full border border-line bg-surface px-5 font-medium hover:border-eucalyptus">
+            E-maily hostům
+          </Link>
           <Link href="/app/hoste/import" className="inline-flex h-11 items-center rounded-full border border-line bg-surface px-5 font-medium hover:border-eucalyptus">
             Vložit z Excelu
           </Link>

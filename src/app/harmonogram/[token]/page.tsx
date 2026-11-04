@@ -21,12 +21,12 @@ export default async function SharedSchedule({ params, searchParams }: Props) {
   const admin = createAdminClient();
   const { data: link } = await admin
     .from("schedule_links")
-    .select("wedding_id, vendor_id, weddings!inner(partner1_name, partner2_name, status)")
+    .select("wedding_id, vendor_id, weddings!inner(partner1_name, partner2_name, status, suspended_at)")
     .eq("token", token)
     .is("revoked_at", null)
     .maybeSingle();
-  const wedding = link?.weddings as unknown as { partner1_name: string; partner2_name: string | null; status: string } | undefined;
-  if (!link || !wedding || wedding.status === "deleted") notFound();
+  const wedding = link?.weddings as unknown as { partner1_name: string; partner2_name: string | null; status: string; suspended_at: string | null } | undefined;
+  if (!link || !wedding || wedding.status === "deleted" || wedding.suspended_at) notFound();
 
   let query = admin
     .from("schedule_items")

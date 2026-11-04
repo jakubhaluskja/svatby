@@ -1,6 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { linkDomain } from "@/lib/domain";
+import { sendRsvpConfirmation } from "@/lib/email/guest-mail";
+import { formatEventTime } from "@/lib/time";
 import { z } from "zod";
 import { householdByToken, resolveWedding, siteBase, tokenByShortCode } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -85,6 +89,40 @@ export async function submitRsvp(site: string, token: string, payload: RsvpPaylo
     console.error("submit_household_rsvp", error);
     return { error: "failed" };
   }
+
+  // Potvrzení e-mailem až po odeslání odpovědi (host nečeká).
+  const domain = await linkDomain();
+  after(async () => {
+    try {
+      const fresh = await householdByToken(wedding.id, token);
+      const to = fresh?.email;
+      if (!fresh || !to) return;
+      const locale = fresh.locale;
+      await sendRsvpConfirmation({
+        weddingId: wedding.id,
+        to,
+        domain,
+        householdId: fresh.id,
+        token,
+        summary: {
+          locale,
+          household: fresh.name,
+          events: fresh.events
+            .filter((e) => e.invited)
+            .map((e) => ({
+              name: e.name,
+              when: e.starts_at ? formatEventTime(e.starts_at, locale, wedding.timezone) : null,
+              guests: fresh.guests.map((g) => ({
+                name: [g.first_name, g.last_name].filter(Boolean).join(" ") || (locale === "en" ? "Guest" : "Host"),
+                status: g.responses[e.id] ?? "pending",
+              })),
+            })),
+        },
+      });
+    } catch (e) {
+      console.error("rsvp_confirmation", e);
+    }
+  });
   return { ok: true };
 }
 
