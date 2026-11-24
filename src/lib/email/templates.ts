@@ -299,3 +299,34 @@ export function taskReminder(d: TaskDigest): RenderedEmail {
   });
   return { subject, html, text: htmlToText(html) };
 }
+
+/** Pozvánka do týmu svatby (partner, spoluorganizátor). */
+export type MemberInvite = {
+  inviter: string;
+  couple: string;
+  name: string | null;
+  role: "partner" | "coorganizer";
+  access: string;
+  url: string;
+};
+
+export function memberInvite(d: MemberInvite): RenderedEmail {
+  const subject = d.role === "partner" ? `${d.inviter} vás zve k plánování vaší svatby` : `${d.inviter} vás zve k přípravám svatby ${d.couple}`;
+  const what =
+    d.role === "partner"
+      ? "Budete mít ke svatbě stejný přístup jako on/ona – checklist, hosty, rozpočet i svatební web."
+      : `Budete mít přístup k těmto částem: ${d.access}.`;
+  const html = layout({
+    preheader: subject,
+    eyebrow: "Pozvánka do týmu",
+    title: d.couple,
+    body:
+      `<p style="margin:0 0 16px">${escapeHtml(d.name ? `Ahoj ${d.name},` : "Ahoj,")}</p>` +
+      `<p style="margin:0 0 16px">${escapeHtml(d.inviter)} vás zve, abyste ${d.role === "partner" ? "spolu plánovali svatbu" : `pomáhali s přípravami svatby ${escapeHtml(d.couple)}`}.</p>` +
+      `<p style="margin:0 0 20px">${escapeHtml(what)}</p>` +
+      button(d.url, "Přijmout pozvánku") +
+      `<p style="margin:0;font-size:13px;color:${COLORS.soft}">Pokud ještě nemáte účet, založíte si ho zdarma během minuty. Odkaz platí 30 dní.</p>`,
+    footer: "Pozvánku jste dostali, protože vás někdo přidal do týmu své svatby. Pokud ji nečekáte, e-mail ignorujte.",
+  });
+  return { subject, html, text: htmlToText(html) };
+}

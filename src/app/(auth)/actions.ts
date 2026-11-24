@@ -50,18 +50,19 @@ export async function signUp(_: AuthState, formData: FormData): Promise<AuthStat
 
   const supabase = await createClient();
   const origin = await requestOrigin();
+  const next = safeNext(formData.get("next"), "/app/zalozit");
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
       data: { full_name: fullName || null },
-      emailRedirectTo: `${origin}/auth/callback?next=/app/zalozit`,
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });
   if (error) return { error: authMessage(error.code, "Registrace se nepovedla. Zkuste to znovu."), fields };
 
   // Je-li potvrzení e-mailu vypnuté, uživatel je rovnou přihlášený.
-  if (data.session) redirect("/app/zalozit");
+  if (data.session) redirect(next);
 
   return {
     info: `Poslali jsme vám e-mail na ${parsed.data.email}. Kliknutím na odkaz v něm registraci dokončíte.`,

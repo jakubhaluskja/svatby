@@ -3,6 +3,7 @@ import { daysUntil, formatWeddingDate } from "@/components/site/site-hero";
 import { createClient } from "@/lib/supabase/server";
 import { utcToZonedParts } from "@/lib/time";
 import { REASON_LABEL, impersonatedBy } from "@/lib/admin";
+import { PATH_MODULE, type Permissions } from "@/lib/team";
 import { getCurrentWedding, requireUser } from "@/lib/wedding";
 import { signOut } from "../(auth)/actions";
 import { endImpersonation } from "../admin/actions";
@@ -40,7 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supabase = await createClient();
   const today = utcToZonedParts(new Date().toISOString()).date;
   const inWeek = new Date(Date.parse(`${today}T00:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
-  const [{ data: profile }, { count: tasks }, { count: guests }, { data: adminRow }, { data: suspension }] = await Promise.all([
+  const [{ data: profile }, { count: tasks }, { count: guests }, { data: adminRow }, { data: suspension }, { data: myMember }] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
     supabase
       .from("tasks")
@@ -54,7 +55,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     wedding.suspended_at
       ? supabase.from("weddings").select("suspended_note").eq("id", wedding.id).maybeSingle()
       : Promise.resolve({ data: null }),
+    wedding.role === "coorganizer"
+      ? supabase.from("wedding_members").select("permissions").eq("wedding_id", wedding.id).eq("user_id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+  const perms = (myMember?.permissions ?? null) as Permissions | null;
+  const hidden = perms ? PATH_MODULE.filter(([, m]) => (perms[m] ?? "none") === "none").map(([href]) => href) : [];
 
   const days = wedding.wedding_date ? daysUntil(wedding.wedding_date) : null;
   const dateLine = wedding.wedding_date
@@ -72,6 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         userRole={ROLE[wedding.role]}
         badges={{ tasks: tasks ?? 0, guests: guests ?? 0 }}
         isAdmin={!!adminRow}
+        hidden={hidden}
         signOut={signOut}
       />
       <div className="min-w-0 flex-1">

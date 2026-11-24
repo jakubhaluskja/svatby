@@ -12,7 +12,7 @@ import { TaskItem } from "./task-item";
 
 export const metadata = { title: "Přehled" };
 
-type Props = { searchParams: Promise<{ vitejte?: string }> };
+type Props = { searchParams: Promise<{ vitejte?: string; pristup?: string }> };
 
 const shortDate = new Intl.DateTimeFormat("cs-CZ", { day: "numeric", month: "numeric", timeZone: "UTC" });
 const longToday = new Intl.DateTimeFormat("cs-CZ", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Prague" });
@@ -31,7 +31,7 @@ function greeting() {
 }
 
 export default async function DashboardPage({ searchParams }: Props) {
-  const { vitejte } = await searchParams;
+  const { vitejte, pristup } = await searchParams;
   const [wedding, user] = await Promise.all([requireWedding(), requireUser()]);
   const supabase = await createClient();
   const today = utcToZonedParts(new Date().toISOString()).date;
@@ -66,7 +66,14 @@ export default async function DashboardPage({ searchParams }: Props) {
 
   return (
     <div className="flex max-w-6xl flex-col gap-6 px-6 py-8 sm:px-10 lg:py-10">
-      {vitejte ? <FormMessage tone="info">Svatba je založená. Web zatím vidíte jen vy, hostům ho zpřístupníte zveřejněním.</FormMessage> : null}
+      {vitejte ? (
+        <FormMessage tone="info">
+          {wedding.role === "coorganizer"
+            ? "Vítejte v týmu! V menu vidíte části, ke kterým vám novomanželé dali přístup."
+            : "Svatba je založená. Web zatím vidíte jen vy, hostům ho zpřístupníte zveřejněním."}
+        </FormMessage>
+      ) : null}
+      {pristup === "0" ? <FormMessage>K této části svatby nemáte přístup. Pokud ho potřebujete, napište novomanželům.</FormMessage> : null}
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>

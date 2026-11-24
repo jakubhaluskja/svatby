@@ -113,6 +113,7 @@ const [contrib] = await q(`insert into contributors (wedding_id, name) values ($
 const [cat] = await q(`select id from budget_categories where wedding_id=$1 limit 1`, [wid]);
 await q(`insert into budget_items (wedding_id, category_id, name, contributor_id, estimate_amount) values ($1,$2,'Hudba',$3,30000)`, [wid, cat.id, contrib.id]);
 await q(`insert into budget_items (wedding_id, category_id, name, estimate_amount) values ($1,$2,'Šaty',25000)`, [wid, cat.id]);
+await as('postgres');
 await q(`insert into wedding_members (wedding_id, user_id, role, permissions, contributor_id, accepted_at)
          values ($1,$2,'coorganizer','{"guests":"read","budget":"own"}',$3, now())`, [wid, coorg.id, contrib.id]);
 
@@ -355,6 +356,47 @@ await q(`update tasks set title='Dort!' where id=$1`, [rt.id]);
 check('přejmenování upozornění neruší', (await q(`select reminded_at from tasks where id=$1`, [rt.id]))[0].reminded_at !== null);
 await q(`update tasks set due_date='2027-01-20' where id=$1`, [rt.id]);
 check('nový termín = nové upozornění', (await q(`select reminded_at from tasks where id=$1`, [rt.id]))[0].reminded_at === null);
+
+
+// --- tým svatby: pozvánky
+await as('postgres');
+const [helper] = await q(`insert into auth.users (email) values ('svedek@x.cz') returning id`);
+const [loner] = await q(`insert into auth.users (email) values ('cizi@x.cz') returning id`);
+await as('authenticated', owner.id);
+await expectError('pár nevloží člena s účtem', () => q(`insert into wedding_members (wedding_id, role, user_id, invited_email) values ($1, 'coorganizer', $2, 'a@x.cz')`, [wid, helper.id]), 'member_fields_locked');
+await expectError('pár nevytvoří dalšího vlastníka', () => q(`insert into wedding_members (wedding_id, role, invited_email) values ($1, 'owner', 'b@x.cz')`, [wid]), '');
+await expectError('neznámý modul v oprávněních', () => q(`insert into wedding_members (wedding_id, role, invited_email, permissions) values ($1, 'coorganizer', 'c@x.cz', '{"foo":"write"}')`, [wid]), 'invalid_permissions');
+await expectError('vlastní úroveň jen u rozpočtu', () => q(`insert into wedding_members (wedding_id, role, invited_email, permissions) values ($1, 'coorganizer', 'c@x.cz', '{"guests":"own"}')`, [wid]), 'invalid_permissions');
+const [inv] = await q(`insert into wedding_members (wedding_id, role, invited_email, display_name, permissions) values ($1, 'coorganizer', 'svedek@x.cz', 'Svědek', '{"checklist":"write","guests":"read"}') returning id, invite_token, invited_by`, [wid]);
+check('pozvánka zná odesílatele', inv.invited_by === owner.id);
+await expectError('pár nepřijme pozvánku za svědka', () => q(`update wedding_members set user_id=$2, accepted_at=now() where id=$1`, [inv.id, helper.id]), 'member_fields_locked');
+await as('authenticated', helper.id);
+check('před přijetím svědek nic nevidí', (await q(`select count(*)::int c from tasks where wedding_id=$1`, [wid]))[0].c === 0);
+const [acc] = await q(`select accept_invite($1) w`, [inv.invite_token]);
+check('přijetí vrátí svatbu', acc.w === wid);
+check('svědek vidí úkoly', (await q(`select count(*)::int c from tasks where wedding_id=$1`, [wid]))[0].c > 0);
+check('svědek čte hosty', (await q(`select my_module_level($1, 'guests') l`, [wid]))[0].l === 'read');
+await expectError('svědek hosty nemění', () => q(`insert into households (wedding_id, name) values ($1, 'X')`, [wid]), 'row-level');
+check('svědek nevidí rozpočet', (await q(`select count(*)::int c from budget_items where wedding_id=$1`, [wid]))[0].c === 0);
+const reuse = await q(`select token from (select invite_token token from wedding_members where id=$1) t`, [inv.id]);
+check('token po přijetí změněn', reuse[0]?.token !== inv.invite_token);
+await as('authenticated', loner.id);
+await expectError('starý odkaz už nefunguje', () => q(`select accept_invite($1)`, [inv.invite_token]), 'invite_not_found');
+await as('authenticated', owner.id);
+const [inv2] = await q(`insert into wedding_members (wedding_id, role, invited_email) values ($1, 'coorganizer', 'dalsi@x.cz') returning invite_token`, [wid]);
+await expectError('vlastník jiné svatby nepřijme', () => q(`select accept_invite($1)`, [inv2.invite_token]), 'already_member');
+await as('postgres');
+await q(`update wedding_members set invited_at = now() - interval '31 days' where invite_token=$1`, [inv2.invite_token]);
+await as('authenticated', loner.id);
+await expectError('prošlá pozvánka', () => q(`select accept_invite($1)`, [inv2.invite_token]), 'invite_expired');
+await as('authenticated', owner.id);
+await q(`update wedding_members set permissions='{"checklist":"read"}' where id=$1`, [inv.id]);
+await as('authenticated', helper.id);
+check('změna oprávnění platí hned', (await q(`select my_module_level($1, 'checklist') l`, [wid]))[0].l === 'read');
+await as('authenticated', owner.id);
+await q(`delete from wedding_members where id=$1`, [inv.id]);
+await as('authenticated', helper.id);
+check('odebraný svědek nic nevidí', (await q(`select count(*)::int c from tasks where wedding_id=$1`, [wid]))[0].c === 0);
 
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);

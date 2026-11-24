@@ -13,15 +13,16 @@ import {
 
 const initial: AuthState = {};
 
-export function SignUpForm() {
+export function SignUpForm({ next, email }: { next?: string; email?: string }) {
   const [state, action, pending] = useActionState(signUp, initial);
 
   if (state.info) return <FormMessage tone="info">{state.info}</FormMessage>;
 
   return (
     <form action={action} className="flex flex-col gap-5">
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <Field label="Vaše jméno" name="full_name" autoComplete="name" defaultValue={state.fields?.full_name} />
-      <Field label="E-mail" name="email" type="email" autoComplete="email" required defaultValue={state.fields?.email} />
+      <Field label="E-mail" name="email" type="email" autoComplete="email" required defaultValue={state.fields?.email ?? email} />
       <Field
         label="Heslo"
         name="password"

@@ -70,3 +70,10 @@ export async function moduleLevel(weddingId: string, module: ModuleName): Promis
   const { data } = await supabase.rpc("my_module_level", { p_wedding_id: weddingId, p_module: module });
   return (data as "none" | "read" | "write" | "own" | null) ?? "none";
 }
+
+/** Modul bez přístupu → zpět na přehled (spoluorganizátor s omezenými právy). */
+export async function requireModule(module: ModuleName): Promise<CurrentWedding> {
+  const wedding = await requireWedding();
+  if (wedding.role === "coorganizer" && (await moduleLevel(wedding.id, module)) === "none") redirect("/app?pristup=0");
+  return wedding;
+}

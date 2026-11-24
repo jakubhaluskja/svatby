@@ -17,7 +17,7 @@ export default async function SignInPage({ searchParams }: Props) {
       <SignInForm next={next} />
       <p className="text-sm text-ink-soft">
         Ještě nemáte účet?{" "}
-        <Link href="/registrace" className="font-medium text-ink underline underline-offset-2">
+        <Link href={next ? `/registrace?next=${encodeURIComponent(next)}` : "/registrace"} className="font-medium text-ink underline underline-offset-2">
           Zaregistrujte se
         </Link>
       </p>

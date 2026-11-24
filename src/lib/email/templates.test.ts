@@ -63,3 +63,13 @@ describe("e-mailové šablony", () => {
     expect(htmlToText('<p>A &amp; B</p><a href="https://y">Klik</a>')).toBe("A & B\nKlik: https://y");
   });
 });
+
+describe("pozvánka do týmu", () => {
+  it("spoluorganizátor vidí přehled přístupu", async () => {
+    const { memberInvite } = await import("./templates");
+    const e = memberInvite({ inviter: "Jana", couple: "Jana a Petr", name: "Eva", role: "coorganizer", access: "Checklist, Hosté (čte)", url: "https://app/pozvanka/xyz" });
+    expect(e.subject).toBe("Jana vás zve k přípravám svatby Jana a Petr");
+    expect(e.html).toContain("Hosté (čte)");
+    expect(e.html).toContain('href="https://app/pozvanka/xyz"');
+  });
+});

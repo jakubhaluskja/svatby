@@ -28,6 +28,7 @@ const GROUPS: { label: string | null; items: Item[] }[] = [
     ],
   },
   { label: "Pro hosty", items: [{ href: "/app/web", label: "Svatební web", icon: "globe" }] },
+  { label: "Nastavení", items: [{ href: "/app/tym", label: "Tým svatby", icon: "user" }] },
 ];
 
 export type SidebarProps = {
@@ -37,14 +38,17 @@ export type SidebarProps = {
   userRole: string;
   badges: { tasks: number; guests: number };
   isAdmin?: boolean;
+  /** Odkazy, které spoluorganizátor nevidí (podle oprávnění). */
+  hidden?: string[];
   signOut: () => Promise<void>;
 };
 
-function NavList({ badges, isAdmin, onNavigate }: { badges: SidebarProps["badges"]; isAdmin?: boolean; onNavigate?: () => void }) {
+function NavList({ badges, isAdmin, hidden = [], onNavigate }: { badges: SidebarProps["badges"]; isAdmin?: boolean; hidden?: string[]; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !hidden.includes(i.href)) })).filter((g) => g.items.length);
   return (
     <nav aria-label="Moduly" className="flex flex-col gap-5">
-      {GROUPS.map((g) => (
+      {groups.map((g) => (
         <div key={g.label ?? "main"} className="flex flex-col gap-0.5">
           {g.label ? <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft/70">{g.label}</p> : null}
           {g.items.map((item) => {
@@ -156,7 +160,7 @@ export function Sidebar(props: SidebarProps) {
               <WeddingCard couple={props.couple} dateLine={props.dateLine} />
             </div>
             <div className="mt-5 px-3 pb-6">
-              <NavList badges={props.badges} isAdmin={props.isAdmin} onNavigate={() => setOpen(false)} />
+              <NavList badges={props.badges} isAdmin={props.isAdmin} hidden={props.hidden} onNavigate={() => setOpen(false)} />
             </div>
             <div className="mt-auto">
               <UserBox userName={props.userName} userRole={props.userRole} signOut={props.signOut} />
@@ -172,7 +176,7 @@ export function Sidebar(props: SidebarProps) {
           <WeddingCard couple={props.couple} dateLine={props.dateLine} />
         </div>
         <div className="mt-5 flex-1 overflow-y-auto px-3 pb-6">
-          <NavList badges={props.badges} isAdmin={props.isAdmin} />
+          <NavList badges={props.badges} isAdmin={props.isAdmin} hidden={props.hidden} />
         </div>
         <UserBox userName={props.userName} userRole={props.userRole} signOut={props.signOut} />
       </aside>
