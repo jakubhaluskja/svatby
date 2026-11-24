@@ -86,10 +86,14 @@ export async function requestPasswordReset(_: AuthState, formData: FormData): Pr
 
   const supabase = await createClient();
   const origin = await requestOrigin();
-  await supabase.auth.resetPasswordForEmail(email.data, {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.data, {
     redirectTo: `${origin}/auth/callback?next=/nove-heslo`,
   });
-  // Neprozrazujeme, zda účet existuje.
+  // Limit odesílání se hlásí (e-mail by nepřišel); jiné chyby ne – neprozrazujeme, zda účet existuje.
+  if (error && (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit" || error.status === 429)) {
+    return { error: authMessage(error.code, "Příliš mnoho pokusů. Zkuste to za pár minut.") };
+  }
+  if (error) console.error("resetPasswordForEmail", error.code, error.message);
   return { info: "Pokud k e-mailu existuje účet, poslali jsme na něj odkaz pro nastavení nového hesla." };
 }
 
