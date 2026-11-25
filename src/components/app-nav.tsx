@@ -27,7 +27,13 @@ const GROUPS: { label: string | null; items: Item[] }[] = [
       { href: "/app/ubytovani", label: "Ubytování", icon: "bed" },
     ],
   },
-  { label: "Pro hosty", items: [{ href: "/app/web", label: "Svatební web", icon: "globe" }] },
+  {
+    label: "Pro hosty",
+    items: [
+      { href: "/app/web", label: "Svatební web", icon: "globe" },
+      { href: "/app/dary", label: "Dary", icon: "gift" },
+    ],
+  },
   { label: "Nastavení", items: [{ href: "/app/tym", label: "Tým svatby", icon: "user" }] },
 ];
 

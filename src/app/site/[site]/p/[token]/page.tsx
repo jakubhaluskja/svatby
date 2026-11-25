@@ -41,6 +41,7 @@ export default async function HouseholdSite({ params, searchParams }: Props) {
   const notices = await siteNotices(wedding, events, locale, household.events.filter((e) => e.invited).map((e) => e.id));
 
   const model = await buildSiteModel(wedding, content, events, locale, {
+    guest: { site, token, householdId: household.id },
     banner: tables.length ? (
         <section className="flex flex-col items-center gap-2 px-6 py-6 text-center" style={{ background: "var(--site-line)" }}>
           <h2 className="text-sm" style={{ color: "var(--site-muted)" }}>{copy.yourTable}</h2>

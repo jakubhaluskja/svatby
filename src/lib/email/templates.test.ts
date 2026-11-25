@@ -31,6 +31,11 @@ describe("e-mailové šablony", () => {
     expect(m.html).toContain("Nechci další e-maily");
   });
 
+  it("poděkování vyjmenuje dary", () => {
+    const e = guestEmail({ ...base, kind: "thank_you", locale: "cs", gifts: ["Mixér", "Svatební cesta"] });
+    expect(e.html).toContain("Moc děkujeme za <strong>Mixér</strong>, <strong>Svatební cesta</strong>.");
+  });
+
   it("poděkování bez vlastního textu", () => {
     const e = guestEmail({ ...base, kind: "thank_you", locale: "cs" });
     expect(e.html).toContain("Moc děkujeme");

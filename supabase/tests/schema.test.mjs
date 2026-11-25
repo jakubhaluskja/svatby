@@ -398,5 +398,29 @@ await q(`delete from wedding_members where id=$1`, [inv.id]);
 await as('authenticated', helper.id);
 check('odebraný svědek nic nevidí', (await q(`select count(*)::int c from tasks where wedding_id=$1`, [wid]))[0].c === 0);
 
+
+// --- dary
+await as('authenticated', owner.id);
+const [gItem] = await q(`insert into gifts (wedding_id, kind, title, price) values ($1, 'item', '{"cs":"Mixér"}', 3000) returning id`, [wid]);
+const [gFund] = await q(`insert into gifts (wedding_id, kind, title, target_amount) values ($1, 'group', '{"cs":"Svatební cesta"}', 50000) returning id`, [wid]);
+const [hh] = await q(`select id from households where wedding_id=$1 limit 1`, [wid]);
+await expectError('pár nezakládá rezervace', () => q(`insert into gift_reservations (wedding_id, gift_id, household_id) values ($1,$2,$3)`, [wid, gItem.id, hh.id]), 'row-level');
+await as('service_role');
+await q(`insert into gift_reservations (wedding_id, gift_id, household_id) values ($1,$2,$3)`, [wid, gItem.id, hh.id]);
+await expectError('dar jde zarezervovat jen jednou', () => q(`insert into gift_reservations (wedding_id, gift_id, household_id) values ($1,$2,$3)`, [wid, gItem.id, hh.id]), 'duplicate');
+const [contr] = await q(`insert into gift_contributions (wedding_id, gift_id, household_id, amount) values ($1,$2,$3, 2000) returning id`, [wid, gFund.id, hh.id]);
+await as('authenticated', owner.id);
+check('pár vidí rezervaci', (await q(`select count(*)::int c from gift_reservations where wedding_id=$1`, [wid]))[0].c === 1);
+await q(`update gift_settings set reveal_reservations=false where wedding_id=$1`, [wid]);
+check('překvapení: pár rezervace nevidí', (await q(`select count(*)::int c from gift_reservations where wedding_id=$1`, [wid]))[0].c === 0);
+await q(`update gift_settings set reveal_reservations=true where wedding_id=$1`, [wid]);
+await q(`update gift_contributions set confirmed_at=now() where id=$1`, [contr.id]);
+const rec = await q(`select description, amount::int a from received_gifts where source='contribution' and source_id=$1`, [contr.id]);
+check('potvrzený příspěvek je obdržený dar', rec.length === 1 && rec[0].description === 'Svatební cesta' && rec[0].a === 2000, JSON.stringify(rec));
+await q(`update gift_contributions set confirmed_at=null where id=$1`, [contr.id]);
+check('zrušení potvrzení dar odebere', (await q(`select count(*)::int c from received_gifts where source_id=$1`, [contr.id]))[0].c === 0);
+await q(`delete from gift_reservations where gift_id=$1`, [gItem.id]);
+check('pár zruší rezervaci', (await q(`select count(*)::int c from gift_reservations where gift_id=$1`, [gItem.id]))[0].c === 0);
+
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);

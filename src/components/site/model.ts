@@ -16,6 +16,28 @@ export type WebEvent = {
   plan_b_address: string | null;
 };
 
+/** Dar ze seznamu na webu (pohled hosta). */
+export type WebGift = {
+  id: string;
+  kind: "item" | "fund" | "group";
+  title: string;
+  description: string;
+  url: string | null;
+  price: number | null;
+  image: string | null;
+  target: number | null;
+  /** Přislíbeno celkem (jen když to pár zobrazuje nebo jde o skupinový dar) */
+  raised: number | null;
+  contributors: string[];
+  reserved: boolean;
+  /** Rezervace / příspěvek této domácnosti */
+  mine: boolean;
+  myAmount: number;
+};
+
+/** Seznam darů a kontext hosta (osobní odkaz) pro rezervace. */
+export type GiftList = { items: WebGift[]; site: string | null; token: string | null; hasAccount: boolean };
+
 /** Vše, co šablona potřebuje k vykreslení webu. */
 export type SiteModel = {
   weddingId: string;
@@ -28,6 +50,7 @@ export type SiteModel = {
   sections: Section[];
   events: WebEvent[];
   gifts: { iban: string | null; holder: string | null; qrSvg: string | null };
+  giftList?: GiftList;
   /** Uzávěrka odpovědí (ISO) */
   rsvpDeadline: string | null;
   /** Sekce skryté za heslem */

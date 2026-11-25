@@ -6,6 +6,7 @@ import type { Locale } from "@/lib/i18n";
 import { spayd } from "@/lib/payment-qr";
 import type { PublicWedding, SiteContent, SiteEvent } from "@/lib/site";
 import { GIFT_COPY } from "@/lib/site-copy";
+import { giftList } from "@/lib/site";
 
 export function toWebEvents(events: SiteEvent[]): WebEvent[] {
   return events.map((e) => ({
@@ -33,8 +34,10 @@ export async function buildSiteModel(
   content: SiteContent,
   events: SiteEvent[],
   locale: Locale,
-  opts: { rsvp: ReactNode; banner?: ReactNode; hidden?: string[] },
+  opts: { rsvp: ReactNode; banner?: ReactNode; hidden?: string[]; guest?: { site: string; token: string; householdId: string } | null },
 ): Promise<SiteModel> {
+  const giftsOn = content.sections.some((s) => s.type === "gifts" && s.enabled);
+  const items = giftsOn ? await giftList(wedding.id, locale, opts.guest?.householdId ?? null) : [];
   return {
     weddingId: wedding.id,
     partner1: wedding.partner1_name,
@@ -45,6 +48,7 @@ export async function buildSiteModel(
     sections: content.sections,
     events: toWebEvents(events),
     gifts: { iban: content.gifts.iban, holder: content.gifts.holder, qrSvg: await giftQr(content.gifts.iban, locale) },
+    giftList: { items, site: opts.guest?.site ?? null, token: opts.guest?.token ?? null, hasAccount: !!content.gifts.iban },
     rsvpDeadline: wedding.rsvp_deadline,
     hidden: opts.hidden ?? [],
     rsvp: opts.rsvp,

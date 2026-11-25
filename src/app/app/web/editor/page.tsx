@@ -1,6 +1,6 @@
 import { linkDomain } from "@/lib/domain";
 import { siteUrl } from "@/lib/hosts";
-import { publicEvents } from "@/lib/site";
+import { giftList, publicEvents } from "@/lib/site";
 import { giftQr, toWebEvents } from "@/lib/site-model";
 import { normalizeSections } from "@/lib/site-sections";
 import { createClient } from "@/lib/supabase/server";
@@ -21,6 +21,7 @@ export default async function EditorPage() {
     publicEvents(wedding.id, wedding.default_locale),
     linkDomain(),
   ]);
+  const giftItems = await giftList(wedding.id, wedding.default_locale, null);
   const locales = ((w?.locales ?? [wedding.default_locale]) as Locale[]).sort((a) => (a === wedding.default_locale ? -1 : 1));
   const published = w?.status === "published";
 
@@ -34,6 +35,7 @@ export default async function EditorPage() {
         timeZone: w?.timezone ?? "Europe/Prague",
         events: toWebEvents(events),
         gifts: { iban: gifts?.iban ?? null, holder: gifts?.account_holder ?? null, qrSvg: await giftQr(gifts?.iban ?? null, wedding.default_locale) },
+        giftList: { items: giftItems, site: null, token: null, hasAccount: !!gifts?.iban },
         rsvpDeadline: w?.rsvp_deadline ?? null,
         hidden: [],
         coords: null,

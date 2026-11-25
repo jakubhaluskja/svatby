@@ -16,6 +16,7 @@ import { GIFT_COPY, SECTION_TITLES } from "@/lib/site-copy";
 import { lt, type LText, type Section, type SectionContent, type SectionType } from "@/lib/site-sections";
 import { AddButton, FieldText, LineText, RemoveButton, RichText, hasText, useEdit } from "../edit";
 import type { SiteModel, WebEvent } from "../model";
+import { GiftList } from "./gift-list";
 
 export const GRAIN =
   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>\")";
@@ -40,7 +41,7 @@ function hasContent(s: Section, model: SiteModel): boolean {
     case "accommodation":
       return hasText(s.content.text, loc);
     case "gifts":
-      return hasText(s.content.text, loc) || (s.content.show_account && !!model.gifts.iban);
+      return hasText(s.content.text, loc) || (s.content.show_account && !!model.gifts.iban) || !!model.giftList?.items.length;
     case "faq":
       return s.content.items.some((i) => hasText(i.q, loc));
     case "contacts":
@@ -180,8 +181,17 @@ export function ContactList({ s, className = "", itemClass = "", nameClass = "",
   );
 }
 
-/** Číslo účtu s QR platbou. */
-export function GiftAccount({ model, s, className = "", style, qrBg = "#fff" }: { model: SiteModel; s: Extract<Section, { type: "gifts" }>; className?: string; style?: CSSProperties; qrBg?: string }) {
+/** Seznam darů a číslo účtu s QR platbou. */
+export function GiftAccount(props: { model: SiteModel; s: Extract<Section, { type: "gifts" }>; className?: string; style?: CSSProperties; qrBg?: string }) {
+  return (
+    <>
+      <GiftList data={props.model.giftList} className="mt-2" />
+      <AccountBox {...props} />
+    </>
+  );
+}
+
+function AccountBox({ model, s, className = "", style, qrBg = "#fff" }: { model: SiteModel; s: Extract<Section, { type: "gifts" }>; className?: string; style?: CSSProperties; qrBg?: string }) {
   const { editing, locale } = useEdit();
   const g = GIFT_COPY[locale];
   if (!s.content.show_account) return null;

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { linkDomain } from "@/lib/domain";
@@ -148,4 +149,66 @@ export async function unlockSite(site: string, _: UnlockState, formData: FormDat
     maxAge: 60 * 60 * 24 * 180,
   });
   redirect(`${await siteBase(site)}/`);
+}
+
+// -----------------------------------------------------------------------------
+// Dary (rezervace a příspěvky přes osobní odkaz domácnosti)
+// -----------------------------------------------------------------------------
+export type GiftResult = { ok?: boolean; error?: "taken" | "closed" | "failed" | "preview"; qrSvg?: string | null; amount?: number; message?: string };
+
+async function giftContext(site: string, token: string, giftId: string) {
+  const wedding = await resolveWedding(site);
+  if (!wedding) return { error: "closed" as const };
+  if (wedding.preview) return { error: "preview" as const };
+  if (!z.string().uuid().safeParse(giftId).success) return { error: "failed" as const };
+  const household = await householdByToken(wedding.id, token);
+  if (!household) return { error: "closed" as const };
+  const db = createAdminClient();
+  const { data: gift } = await db.from("gifts").select("id, kind, title").eq("id", giftId).eq("wedding_id", wedding.id).maybeSingle();
+  if (!gift) return { error: "failed" as const };
+  return { wedding, household, gift, db };
+}
+
+function revalidateGuest(site: string, token: string) {
+  revalidatePath(`/site/${site}/p/${token}`);
+}
+
+export async function reserveGift(site: string, token: string, giftId: string): Promise<GiftResult> {
+  const ctx = await giftContext(site, token, giftId);
+  if ("error" in ctx) return { error: ctx.error };
+  if (ctx.gift.kind !== "item") return { error: "failed" };
+  const { error } = await ctx.db.from("gift_reservations").insert({ wedding_id: ctx.wedding.id, gift_id: ctx.gift.id, household_id: ctx.household.id });
+  if (error) return { error: error.code === "23505" ? "taken" : "failed" };
+  revalidateGuest(site, token);
+  return { ok: true };
+}
+
+export async function cancelGift(site: string, token: string, giftId: string): Promise<GiftResult> {
+  const ctx = await giftContext(site, token, giftId);
+  if ("error" in ctx) return { error: ctx.error };
+  await ctx.db.from("gift_reservations").delete().eq("gift_id", ctx.gift.id).eq("household_id", ctx.household.id).is("cancelled_at", null);
+  revalidateGuest(site, token);
+  return { ok: true };
+}
+
+/** Příslib příspěvku: zapíše ho a vrátí QR platbu s částkou na účet páru. */
+export async function pledgeGift(site: string, token: string, giftId: string, rawAmount: number): Promise<GiftResult> {
+  const amount = Math.round(Number(rawAmount));
+  if (!Number.isFinite(amount) || amount < 1 || amount > 1_000_000) return { error: "failed" };
+  const ctx = await giftContext(site, token, giftId);
+  if ("error" in ctx) return { error: ctx.error };
+  if (ctx.gift.kind === "item") return { error: "failed" };
+  const { error } = await ctx.db.from("gift_contributions").insert({ wedding_id: ctx.wedding.id, gift_id: ctx.gift.id, household_id: ctx.household.id, display_name: ctx.household.name, amount });
+  if (error) return { error: "failed" };
+
+  const { data: settings } = await ctx.db.from("gift_settings").select("iban").eq("wedding_id", ctx.wedding.id).maybeSingle();
+  const title = ((ctx.gift.title ?? {}) as Record<string, string>).cs ?? "";
+  const message = `${title} - ${ctx.household.name}`.slice(0, 60);
+  let qrSvg: string | null = null;
+  if (settings?.iban) {
+    const [{ default: QRCode }, { spayd }] = await Promise.all([import("qrcode"), import("@/lib/payment-qr")]);
+    qrSvg = await QRCode.toString(spayd({ iban: settings.iban, amount, message }), { type: "svg", margin: 0, errorCorrectionLevel: "M" });
+  }
+  revalidateGuest(site, token);
+  return { ok: true, qrSvg, amount, message };
 }

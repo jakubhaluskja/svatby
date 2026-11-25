@@ -32,6 +32,8 @@ export type GuestEmailInput = {
   note?: string;
   /** Předmět u zprávy hostům. */
   subject?: string;
+  /** Obdržené dary domácnosti (u poděkování). */
+  gifts?: string[];
 };
 
 const COLORS = { ink: "#1e2b26", soft: "#5d6b65", paper: "#f5f7f5", accent: "#4f7263", line: "#dfe5e1" };
@@ -212,7 +214,13 @@ export function guestEmail(input: GuestEmailInput): RenderedEmail {
       preheader: subject,
       eyebrow: t.thank_you.eyebrow,
       title: t.couple(w),
-      body: hello + paragraphs(custom || capitalize(t.thank_you.note)) + `<p style="margin:24px 0 0">${t.love(w)}</p>`,
+      body:
+        hello +
+        paragraphs(custom || capitalize(t.thank_you.note)) +
+        (input.gifts?.length
+          ? `<p style="margin:0 0 16px">${escapeHtml(l === "cs" ? "Moc děkujeme za" : "Thank you so much for")} ${input.gifts.map((g) => `<strong>${escapeHtml(g)}</strong>`).join(", ")}.</p>`
+          : "") +
+        `<p style="margin:24px 0 0">${t.love(w)}</p>`,
       footer,
     });
   }

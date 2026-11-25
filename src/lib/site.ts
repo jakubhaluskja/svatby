@@ -409,3 +409,41 @@ export async function householdRooms(household: GuestHousehold, locale: Locale):
   }
   return [...byRoom.values()];
 }
+
+/** Seznam darů pro web; s domácností označí její rezervace a příspěvky. */
+export async function giftList(weddingId: string, locale: Locale, householdId: string | null): Promise<import("@/components/site/model").WebGift[]> {
+  const db = createAdminClient();
+  const [{ data: gifts }, { data: reservations }, { data: contributions }] = await Promise.all([
+    db.from("gifts").select("id, kind, title, description, url, price, image_key, target_amount, show_contributors, show_amounts").eq("wedding_id", weddingId).order("sort").order("created_at"),
+    db.from("gift_reservations").select("gift_id, household_id").eq("wedding_id", weddingId).is("cancelled_at", null),
+    db.from("gift_contributions").select("gift_id, household_id, display_name, amount, households(name)").eq("wedding_id", weddingId),
+  ]);
+  const { photoUrl } = await import("@/lib/media");
+  const pick = (v: unknown) => {
+    const o = (v ?? {}) as Record<string, string>;
+    return (o[locale] || o.cs || o.en || "").trim();
+  };
+  return (gifts ?? []).map((g) => {
+    const res = (reservations ?? []).find((r) => r.gift_id === g.id);
+    const contr = (contributions ?? []).filter((c) => c.gift_id === g.id);
+    const raised = contr.reduce((a, c) => a + Number(c.amount), 0);
+    const mineAmount = householdId ? contr.filter((c) => c.household_id === householdId).reduce((a, c) => a + Number(c.amount), 0) : 0;
+    return {
+      id: g.id,
+      kind: g.kind as "item" | "fund" | "group",
+      title: pick(g.title),
+      description: pick(g.description),
+      url: g.url,
+      price: g.price === null ? null : Number(g.price),
+      image: photoUrl(g.image_key),
+      target: g.target_amount === null ? null : Number(g.target_amount),
+      raised: g.kind === "group" || g.show_amounts ? raised : null,
+      contributors: g.show_contributors
+        ? [...new Set(contr.map((c) => c.display_name || (c.households as unknown as { name: string } | null)?.name).filter(Boolean) as string[])]
+        : [],
+      reserved: !!res,
+      mine: !!householdId && (res?.household_id === householdId || mineAmount > 0),
+      myAmount: mineAmount,
+    };
+  });
+}

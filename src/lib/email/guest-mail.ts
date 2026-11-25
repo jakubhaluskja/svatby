@@ -88,6 +88,13 @@ export async function sendGuestEmails(opts: {
   const skipped = ids.length - targets.length;
   if (!targets.length) return { sent: 0, skipped, failed: 0 };
 
+  // U poděkování vyjmenujeme obdržené dary.
+  const giftsBy = new Map<string, string[]>();
+  if (opts.kind === "thank_you") {
+    const { data: received } = await db.from("received_gifts").select("household_id, description").eq("wedding_id", opts.weddingId).in("household_id", targets.map((h) => h.id));
+    for (const r of received ?? []) giftsBy.set(r.household_id, [...(giftsBy.get(r.household_id) ?? []), r.description]);
+  }
+
   const messages: OutgoingEmail[] = targets.map((h) => {
     const locale = (h.locale as Locale) ?? "cs";
     const unsub = unsubscribeUrl(opts.domain, h.token);
@@ -101,6 +108,7 @@ export async function sendGuestEmails(opts: {
       unsubscribeUrl: unsub,
       note: locale === "en" && opts.noteEn ? opts.noteEn : opts.note,
       subject: locale === "en" && opts.subjectEn ? opts.subjectEn : opts.subject,
+      gifts: giftsBy.get(h.id),
     });
     return { to: h.email as string, ...e, replyTo: wi.replyTo, headers: unsubHeaders(unsub) };
   });
