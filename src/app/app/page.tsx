@@ -115,7 +115,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         </a>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.35fr_1fr_1fr_1fr]">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.35fr_1fr_1fr_1fr]" data-tour="stats">
         <section className="relative overflow-hidden rounded-2xl bg-eucalyptus p-6 text-white shadow-card">
           {days !== null && days >= 0 ? (
             <>

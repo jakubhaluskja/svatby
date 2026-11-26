@@ -473,5 +473,11 @@ check('pár vidí místa', (await q(`select count(*)::int c from venue_options w
 await as('authenticated', loner.id);
 check('cizí místa nevidí', (await q(`select count(*)::int c from venue_options where wedding_id=$1`, [wid]))[0].c === 0);
 
+
+// --- průvodce
+await as('authenticated', owner.id);
+await q(`update profiles set tour_done_at = now() where id=$1`, [owner.id]);
+check('uživatel si uloží dokončený průvodce', (await q(`select tour_done_at from profiles where id=$1`, [owner.id]))[0].tour_done_at !== null);
+
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);

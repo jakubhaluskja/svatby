@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icon, type IconName } from "@/components/icons";
+import { TourLink } from "@/components/tour";
 import { Wordmark } from "@/components/ui";
 
 type Item = { href: string; label: string; icon: IconName; exact?: boolean; badge?: "tasks" | "guests" };
@@ -47,6 +48,8 @@ const GROUPS: { label: string | null; items: Item[] }[] = [
   },
 ];
 
+const TOUR_KEYS: Record<string, string> = { Plánování: "nav-plan", Hosté: "nav-guests", "Pro hosty": "nav-web", Nastavení: "nav-settings" };
+
 export type SidebarProps = {
   couple: string;
   dateLine: string | null;
@@ -65,7 +68,7 @@ function NavList({ badges, isAdmin, hidden = [], onNavigate }: { badges: Sidebar
   return (
     <nav aria-label="Moduly" className="flex flex-col gap-5">
       {groups.map((g) => (
-        <div key={g.label ?? "main"} className="flex flex-col gap-0.5">
+        <div key={g.label ?? "main"} className="flex flex-col gap-0.5" data-tour={g.label ? TOUR_KEYS[g.label] : undefined}>
           {g.label ? <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-soft/70">{g.label}</p> : null}
           {g.items.map((item) => {
             const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
@@ -90,6 +93,7 @@ function NavList({ badges, isAdmin, hidden = [], onNavigate }: { badges: Sidebar
           })}
         </div>
       ))}
+      <TourLink onClick={onNavigate} className="flex h-9 items-center gap-3 self-start rounded-xl px-3 text-sm text-ink-soft hover:bg-paper hover:text-ink" />
       {isAdmin ? (
         <Link href="/admin" onClick={onNavigate} className="flex h-10 items-center gap-3 rounded-xl px-3 text-[15px] text-plum hover:bg-plum/8">
           <Icon n="shield" />
@@ -102,7 +106,7 @@ function NavList({ badges, isAdmin, hidden = [], onNavigate }: { badges: Sidebar
 
 function WeddingCard({ couple, dateLine }: Pick<SidebarProps, "couple" | "dateLine">) {
   return (
-    <div className="rounded-2xl bg-eucalyptus-mist px-4 py-3.5">
+    <div className="rounded-2xl bg-eucalyptus-mist px-4 py-3.5" data-tour="wedding">
       <p className="font-serif text-lg leading-tight">{couple}</p>
       <p className="mt-0.5 text-[13px] text-eucalyptus-deep">{dateLine ?? "Datum zatím nevíte"}</p>
     </div>
@@ -158,7 +162,7 @@ export function Sidebar(props: SidebarProps) {
       {/* mobil */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-surface/95 px-4 backdrop-blur lg:hidden print:hidden">
         {brand}
-        <button type="button" onClick={() => setOpen(true)} aria-label="Otevřít menu" aria-expanded={open} className="grid size-10 place-items-center rounded-full hover:bg-paper">
+        <button type="button" onClick={() => setOpen(true)} aria-label="Otevřít menu" aria-expanded={open} data-tour="menu-button" className="grid size-10 place-items-center rounded-full hover:bg-paper">
           <Icon n="menu" />
         </button>
       </header>

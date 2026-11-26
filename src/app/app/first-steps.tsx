@@ -22,7 +22,7 @@ export function FirstSteps({ steps, weddingId }: { steps: Step[]; weddingId: str
   const next = steps.find((s) => !s.done);
 
   return (
-    <section className="rounded-2xl bg-surface p-6 shadow-card ring-1 ring-line/70">
+    <section className="rounded-2xl bg-surface p-6 shadow-card ring-1 ring-line/70" data-tour="first-steps">
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="font-serif text-2xl">První kroky</h2>

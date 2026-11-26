@@ -3,7 +3,9 @@ import { daysUntil, formatWeddingDate } from "@/components/site/site-hero";
 import { createClient } from "@/lib/supabase/server";
 import { utcToZonedParts } from "@/lib/time";
 import { REASON_LABEL, impersonatedBy } from "@/lib/admin";
+import { Suspense } from "react";
 import { RegisterServiceWorker } from "@/components/pwa";
+import { AppTour } from "@/components/tour";
 import { PATH_MODULE, type Permissions } from "@/lib/team";
 import { getCurrentWedding, requireUser } from "@/lib/wedding";
 import { signOut } from "../(auth)/actions";
@@ -43,7 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const today = utcToZonedParts(new Date().toISOString()).date;
   const inWeek = new Date(Date.parse(`${today}T00:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
   const [{ data: profile }, { count: tasks }, { count: guests }, { data: adminRow }, { data: suspension }, { data: myMember }] = await Promise.all([
-    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("full_name, tour_done_at").eq("id", user.id).maybeSingle(),
     supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })
@@ -71,6 +73,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
     <RegisterServiceWorker />
+    <Suspense fallback={null}>
+      <AppTour autoStart={!!profile && !profile.tour_done_at && !adminEmail} />
+    </Suspense>
     {impersonation}
     <div className="flex min-h-svh flex-col lg:flex-row">
       <Sidebar
