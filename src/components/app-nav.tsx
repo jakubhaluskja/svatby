@@ -14,7 +14,8 @@ const GROUPS: { label: string | null; items: Item[] }[] = [
     label: "Plánování",
     items: [
       { href: "/app/checklist", label: "Checklist", icon: "check", badge: "tasks" },
-      { href: "/app/harmonogram", label: "Harmonogram", icon: "clock" },
+      { href: "/app/harmonogram", label: "Harmonogram", icon: "clock", exact: true },
+      { href: "/app/harmonogram/den", label: "Den D", icon: "heart" },
       { href: "/app/rozpocet", label: "Rozpočet", icon: "wallet" },
     ],
   },

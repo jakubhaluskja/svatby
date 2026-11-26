@@ -169,3 +169,17 @@ export async function importGuests(_: ImportState, formData: FormData): Promise<
   revalidatePath("/app/hoste");
   return { created: households.length, guests, skipped };
 }
+
+/** Ruční záznam „pozvánku jsme předali osobně / poštou“ (nebo zrušení). */
+export async function setInvited(householdId: string, invited: boolean) {
+  const wedding = await requireWedding();
+  const id = z.string().uuid().parse(householdId);
+  const supabase = await createClient();
+  await supabase
+    .from("households")
+    .update({ invited_at: invited ? new Date().toISOString() : null })
+    .eq("id", id)
+    .eq("wedding_id", wedding.id);
+  revalidatePath(`/app/hoste/${id}`);
+  revalidatePath("/app/hoste", "layout");
+}

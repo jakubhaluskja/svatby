@@ -4,6 +4,7 @@ import { loadSeating } from "@/lib/seating-data";
 import { createClient } from "@/lib/supabase/server";
 import { moduleLevel, requireWedding } from "@/lib/wedding";
 import { SeatingEditor } from "./seating-editor";
+import { SeatingList } from "./seating-list";
 
 export const metadata = { title: "Zasedací pořádek" };
 
@@ -53,7 +54,14 @@ export default async function SeatingPage({ searchParams }: Props) {
           <Link href="/app/udalosti" className="font-medium underline underline-offset-2">Přejít na události</Link>
         </div>
       ) : (
-        <SeatingEditor key={current.id} data={data} weddingId={wedding.id} canEdit={editable} />
+        <>
+          <div className="md:hidden">
+            <SeatingList data={data} canEdit={editable} />
+          </div>
+          <div className="hidden md:block">
+            <SeatingEditor key={current.id} data={data} weddingId={wedding.id} canEdit={editable} />
+          </div>
+        </>
       )}
     </div>
   );

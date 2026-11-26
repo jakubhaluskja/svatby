@@ -116,7 +116,12 @@ export function ChecklistView({
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="font-serif text-4xl tracking-tight">Checklist</h1>
-            <p className="mt-2 text-sm text-ink-soft">Termíny se posouvají podle data svatby.</p>
+            <p className="mt-2 text-sm text-ink-soft">
+              Termíny se posouvají podle data svatby.{" "}
+              <a href="/app/checklist/export" className="text-eucalyptus-deep hover:underline">
+                Stáhnout do Excelu
+              </a>
+            </p>
           </div>
           {canEdit ? (
             <button type="button" onClick={() => setAdding(true)} className="inline-flex h-10 items-center gap-2 self-start rounded-full bg-ink px-4 text-sm font-medium text-white hover:bg-ink/85 sm:self-auto">

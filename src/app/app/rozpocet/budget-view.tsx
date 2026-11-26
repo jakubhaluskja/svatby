@@ -98,7 +98,12 @@ export function BudgetView(p: Props) {
     <div className="flex min-h-svh flex-col xl:flex-row">
       <div className="flex min-w-0 flex-1 flex-col gap-6 px-6 py-8 sm:px-10 lg:py-10">
         <header className="flex flex-col gap-1">
-          <h1 className="font-serif text-4xl tracking-tight">Rozpočet</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-serif text-4xl tracking-tight">Rozpočet</h1>
+            <a href="/app/rozpocet/export" className="text-sm text-eucalyptus-deep hover:underline">
+              Stáhnout do Excelu
+            </a>
+          </div>
           <p className="text-sm text-ink-soft">
             Vše v korunách. Eura převádíme kurzem ČNB {p.eur.date ? `z ${fmtDate(p.eur.date)}` : ""} ({eur.toLocaleString("cs-CZ", { maximumFractionDigits: 3 })} Kč){p.eur.fallback ? ", kurz se nepodařilo načíst, počítáme orientačně" : ""}.
           </p>

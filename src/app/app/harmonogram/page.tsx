@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requestOrigin } from "@/lib/origin";
 import { sortSchedule, type ScheduleItem } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
@@ -37,6 +38,9 @@ export default async function SchedulePage() {
         <p className="text-ink-soft">
           Minutu po minutě: kdo kdy přijede, kde co probíhá a koho volat. Svědci a dodavatelé ho otevřou odkazem v mobilu.
         </p>
+        <Link href="/app/harmonogram/den" className="mt-1 inline-flex h-10 items-center gap-2 self-start rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-ink/85">
+          Zobrazení pro den D v mobilu
+        </Link>
       </div>
       <ScheduleEditor
         items={sorted}

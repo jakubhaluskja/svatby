@@ -7,7 +7,7 @@ import { householdUrl } from "@/lib/hosts";
 import { answerLabel, type Question } from "@/lib/rsvp-questions";
 import { createClient } from "@/lib/supabase/server";
 import { requireWedding } from "@/lib/wedding";
-import { deleteHousehold, saveRsvpDetails } from "../actions";
+import { deleteHousehold, saveRsvpDetails, setInvited } from "../actions";
 import { LinkPanel } from "./link-panel";
 import { ResponseSelect } from "./response-select";
 
@@ -69,6 +69,16 @@ export default async function HouseholdPage({ params, searchParams }: Props) {
       {ulozeno ? <FormMessage tone="info">Změny jsou uložené.</FormMessage> : null}
 
       <LinkPanel householdId={h.id} url={url} shortCode={h.short_code} message={message} email={h.email} invited={!!invitedAt} />
+      <form action={setInvited.bind(null, h.id, !invitedAt)} className="-mt-6 flex flex-wrap items-center gap-3 text-sm">
+        <span className="text-ink-soft">
+          {invitedAt
+            ? `Pozvánka předána ${new Intl.DateTimeFormat("cs-CZ", { day: "numeric", month: "numeric", year: "numeric", timeZone: "Europe/Prague" }).format(new Date(invitedAt))}.`
+            : "Pozvánku zatím nemáte označenou jako předanou."}
+        </span>
+        <button type="submit" className="text-eucalyptus-deep underline underline-offset-2 hover:text-ink">
+          {invitedAt ? "Zrušit označení" : "Pozvali jsme osobně / poštou"}
+        </button>
+      </form>
 
       <section className="flex flex-col gap-4">
         <h2 className="font-serif text-2xl tracking-tight">Účast</h2>

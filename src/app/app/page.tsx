@@ -149,6 +149,14 @@ export default async function DashboardPage({ searchParams }: Props) {
         />
       </div>
 
+      {days !== null && days >= -1 && days <= 1 ? (
+        <Link href="/app/harmonogram/den" className="flex items-center gap-3 rounded-2xl bg-plum px-5 py-4 text-white shadow-card hover:bg-plum/90">
+          <Icon n="heart" />
+          <span className="flex-1 font-medium">{days === 0 ? "Je to tady! Otevřete program dne D." : days === 1 ? "Zítra je to tady. Program dne D máte po ruce." : "Program dne D"}</span>
+          <Icon n="chev" />
+        </Link>
+      ) : null}
+
       {steps.length ? <FirstSteps steps={steps} weddingId={wedding.id} /> : null}
 
 

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { normalizeSections } from "@/lib/site-sections";
 import { createClient } from "@/lib/supabase/server";
 import { requireWedding } from "@/lib/wedding";
 
@@ -53,7 +54,9 @@ export async function saveGift(id: string | null, input: unknown): Promise<Resul
   const { error } = id
     ? await supabase.from("gifts").update(row).eq("id", uuid.parse(id)).eq("wedding_id", wedding.id)
     : await supabase.from("gifts").insert({ ...row, wedding_id: wedding.id, sort: Date.now() % 1_000_000_000 });
-  return error ? fail(error, "Dar se nepodařilo uložit.") : done();
+  if (error) return fail(error, "Dar se nepodařilo uložit.");
+  if (!id) await enableGiftsSection(wedding.id);
+  return done();
 }
 
 export async function deleteGift(id: string): Promise<Result> {
@@ -147,4 +150,18 @@ export async function deleteReceived(id: string): Promise<Result> {
   const supabase = await createClient();
   const { error } = await supabase.from("received_gifts").delete().eq("id", uuid.parse(id)).eq("wedding_id", wedding.id).eq("source", "manual");
   return error ? fail(error, "Dar se nepodařilo smazat.") : done();
+}
+
+/** První dar zapne na webu sekci Dary (koncept i zveřejněnou verzi). */
+async function enableGiftsSection(weddingId: string) {
+  const supabase = await createClient();
+  const { data: pages } = await supabase.from("site_pages").select("state, sections").eq("wedding_id", weddingId);
+  for (const p of pages ?? []) {
+    const sections = normalizeSections(p.sections);
+    const gifts = sections.find((x) => x.type === "gifts");
+    if (!gifts || gifts.enabled) continue;
+    const next = sections.map((x) => (x.type === "gifts" ? { ...x, enabled: true } : x));
+    await supabase.from("site_pages").update({ sections: next }).eq("wedding_id", weddingId).eq("state", p.state);
+  }
+  revalidatePath("/app/web", "layout");
 }
