@@ -8,6 +8,7 @@ import { siteUrl } from "@/lib/hosts";
 import { createClient } from "@/lib/supabase/server";
 import { utcToZonedParts } from "@/lib/time";
 import { requireUser, requireWedding } from "@/lib/wedding";
+import { FirstSteps, type Step } from "./first-steps";
 import { TaskItem } from "./task-item";
 
 export const metadata = { title: "Přehled" };
@@ -37,7 +38,8 @@ export default async function DashboardPage({ searchParams }: Props) {
   const today = utcToZonedParts(new Date().toISOString()).date;
   const inWeek = new Date(Date.parse(`${today}T00:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
 
-  const [{ data: week }, { count: taskTotal }, { count: taskDone }, book, { data: profile }, { data: members }] = await Promise.all([
+  const couple = wedding.role !== "coorganizer";
+  const [{ data: week }, { count: taskTotal }, { count: taskDone }, book, { data: profile }, { data: members }, onboarding] = await Promise.all([
     supabase
       .from("tasks")
       .select("id, title, due_date, done_at, assignee_member_id, assignee_name")
@@ -51,7 +53,16 @@ export default async function DashboardPage({ searchParams }: Props) {
     supabase.from("tasks").select("id", { count: "exact", head: true }).eq("wedding_id", wedding.id).is("parent_id", null).not("done_at", "is", null),
     loadGuestBook(supabase, wedding.id),
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
-    supabase.from("wedding_members").select("id, display_name, invited_email").eq("wedding_id", wedding.id),
+    supabase.from("wedding_members").select("id, role, display_name, invited_email").eq("wedding_id", wedding.id),
+    couple
+      ? Promise.all([
+          supabase.from("events").select("starts_at, location_name").eq("wedding_id", wedding.id),
+          supabase.from("site_pages").select("updated_at").eq("wedding_id", wedding.id).eq("state", "draft").maybeSingle(),
+          supabase.from("weddings").select("created_at, budget_total").eq("id", wedding.id).single(),
+          supabase.from("budget_items").select("id", { count: "exact", head: true }).eq("wedding_id", wedding.id).or("estimate_amount.not.is.null,actual_amount.not.is.null"),
+          supabase.from("households").select("id", { count: "exact", head: true }).eq("wedding_id", wedding.id).not("invited_at", "is", null),
+        ])
+      : Promise.resolve(null),
   ]);
 
   const memberName = new Map((members ?? []).map((m) => [m.id as string, (m.display_name as string | null) || (m.invited_email as string | null) || "Člen týmu"]));
@@ -63,6 +74,21 @@ export default async function DashboardPage({ searchParams }: Props) {
   const firstName = (profile?.full_name ?? "").split(" ")[0];
   const webUrl = siteUrl(wedding.slug, await linkDomain());
   const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
+
+  let steps: Step[] = [];
+  if (onboarding) {
+    const [{ data: evs }, { data: page }, { data: wrow }, { count: budgetItems }, { count: invitedCount }] = onboarding;
+    const created = Date.parse(wrow?.created_at ?? "");
+    steps = [
+      { key: "date", title: "Datum a místo", text: "Bez nich se nic dalšího nehne.", href: "/app/udalosti", done: !!wedding.wedding_date && (evs ?? []).some((e) => e.location_name) },
+      { key: "partner", title: "Pozvat partnera", text: "Plánujte spolu, každý ze svého telefonu.", href: "/app/tym", done: (members ?? []).some((m) => m.role === "partner") },
+      { key: "budget", title: "Nastavit rozpočet", text: "Kolik chcete utratit a za co.", href: "/app/rozpocet", done: !!wrow?.budget_total || (budgetItems ?? 0) > 0 },
+      { key: "events", title: "Program dne", text: "Obřad, hostina, zábava – hosté u nich potvrdí účast.", href: "/app/udalosti", done: (evs ?? []).filter((e) => e.starts_at).length >= 2 },
+      { key: "guests", title: "Přidat hosty", text: "Ručně nebo vložením z Excelu.", href: "/app/hoste", done: book.households.length > 0 },
+      { key: "web", title: "Vyladit web", text: "Šablona, texty, fotky – změny vidíte hned.", href: "/app/web/editor", done: !!page && Date.parse(page.updated_at) - created > 60_000 },
+      { key: "invite", title: "Rozeslat pozvánky", text: "E-mailem, odkazem nebo s QR kódem na papíře.", href: "/app/hoste/emaily", done: (invitedCount ?? 0) > 0 || book.households.some((h) => h.rsvp_submitted_at) },
+    ];
+  }
 
   return (
     <div className="flex max-w-6xl flex-col gap-6 px-6 py-8 sm:px-10 lg:py-10">
@@ -123,21 +149,8 @@ export default async function DashboardPage({ searchParams }: Props) {
         />
       </div>
 
-      {book.households.length === 0 ? (
-        <Card className="flex flex-col gap-3 p-6">
-          <h2 className="font-serif text-2xl">Začněte tady</h2>
-          <ol className="flex flex-col gap-2 text-[15px]">
-            <li>
-              1. <Link href="/app/udalosti" className="font-medium underline underline-offset-2">Doplňte události</Link>
-              <span className="text-ink-soft">: obřad, hostinu, večerní zábavu. Hosté u nich potvrdí účast.</span>
-            </li>
-            <li>
-              2. <Link href="/app/hoste" className="font-medium underline underline-offset-2">Přidejte hosty</Link>
-              <span className="text-ink-soft">, ručně nebo vložením z Excelu. Každá domácnost dostane osobní odkaz.</span>
-            </li>
-          </ol>
-        </Card>
-      ) : null}
+      {steps.length ? <FirstSteps steps={steps} weddingId={wedding.id} /> : null}
+
 
       <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
         <Card className="flex flex-col p-6">
