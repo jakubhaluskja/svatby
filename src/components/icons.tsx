@@ -1,6 +1,6 @@
 /** Jednoduché tahové ikony aplikace (24×24). */
 
-export type IconName = "home" | "users" | "calendar" | "check" | "clock" | "seat" | "bed" | "wallet" | "globe" | "gift" | "image" | "settings" | "plus" | "search" | "pin" | "user" | "phone" | "undo" | "redo" | "chev" | "heart" | "mail" | "link" | "menu" | "close" | "logout" | "eye" | "shop" | "drag" | "shield" | "send";
+export type IconName = "home" | "users" | "calendar" | "check" | "clock" | "seat" | "bed" | "wallet" | "globe" | "gift" | "image" | "settings" | "plus" | "search" | "pin" | "user" | "phone" | "undo" | "redo" | "chev" | "heart" | "mail" | "link" | "menu" | "close" | "logout" | "eye" | "shop" | "drag" | "shield" | "send" | "camera";
 const P: Record<IconName, React.ReactNode> = {
   home: <><path d="M4 11 12 4l8 7" /><path d="M6 10v9h12v-9" /></>,
   users: <><circle cx="9" cy="8.5" r="3" /><path d="M3.5 19c.8-3.2 3-4.6 5.5-4.6s4.7 1.4 5.5 4.6" /><path d="M15.5 5.8a3 3 0 0 1 0 5.4M17 14.6c1.8.5 3 1.9 3.5 4.4" /></>,
@@ -26,6 +26,7 @@ const P: Record<IconName, React.ReactNode> = {
   mail: <><rect x="3.5" y="5.5" width="17" height="13" rx="2" /><path d="m4 7 8 6 8-6" /></>,
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
   shield: <><path d="M12 3.5 5 6v5.5c0 4.3 3 7.6 7 9 4-1.4 7-4.7 7-9V6l-7-2.5Z" /><path d="m9 12 2 2 4-4" /></>,
+  camera: <><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.3-2h6l1.3 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-9Z" /><circle cx="12" cy="13" r="3.5" /></>,
   send: <><path d="M20.5 3.5 10 14" /><path d="m20.5 3.5-6.5 17-4-6.5-6.5-4 17-6.5Z" /></>,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   logout: <><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" /><path d="M10 16l-4-4 4-4M6 12h10" /></>,

@@ -1,15 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import "@fontsource/pinyon-script/400.css";
-import "@fontsource/bodoni-moda/400.css";
-import "@fontsource/bodoni-moda/400-italic.css";
-import "@fontsource/bodoni-moda/700.css";
-import "@fontsource/instrument-serif/400.css";
-import "@fontsource/instrument-serif/400-italic.css";
-import "@fontsource/gloock/400.css";
-import "@fontsource/caveat/400.css";
-import "@fontsource/caveat/600.css";
+import "./fonts";
 import type { Locale } from "@/lib/i18n";
 import { formatIban } from "@/lib/payment-qr";
 import { GIFT_COPY, SECTION_TITLES } from "@/lib/site-copy";

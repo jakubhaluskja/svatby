@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LanguageSwitch } from "@/components/site/language-switch";
+import { PhotosBand } from "@/components/site/photos-band";
 import { SiteView } from "@/components/site/site-view";
 import { buildSiteModel } from "@/lib/site-model";
 import { SiteShell } from "@/components/site/site-shell";
-import { householdByToken, householdRooms, householdTables, localizeEvents, pickLocale, resolveWedding, siteContent, siteNotices } from "@/lib/site";
+import { siteBase, householdByToken, householdRooms, householdTables, localizeEvents, pickLocale, resolveWedding, siteContent, siteNotices } from "@/lib/site";
 import { SiteNotices } from "@/components/site/site-notices";
 import { siteCopy } from "@/lib/site-copy";
 import { RsvpForm } from "./rsvp-form";
@@ -114,6 +115,7 @@ export default async function HouseholdSite({ params, searchParams }: Props) {
       <div className="relative">
         <LanguageSwitch locales={wedding.locales} current={locale} />
         <SiteView template={content.template} model={model} locale={locale} />
+        {wedding.gallery_enabled ? <PhotosBand href={`${await siteBase(site)}/fotky/${wedding.gallery_token}`} locale={locale} /> : null}
       </div>
     </SiteShell>
   );

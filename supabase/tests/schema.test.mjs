@@ -422,5 +422,28 @@ check('zrušení potvrzení dar odebere', (await q(`select count(*)::int c from 
 await q(`delete from gift_reservations where gift_id=$1`, [gItem.id]);
 check('pár zruší rezervaci', (await q(`select count(*)::int c from gift_reservations where gift_id=$1`, [gItem.id]))[0].c === 0);
 
+
+// --- galerie a kniha přání
+await as('authenticated', owner.id);
+const [galb] = await q(`select id from albums where wedding_id=$1 and kind='guests'`, [wid]);
+check('svatba má album hostů', !!galb);
+await expectError('pár nezakládá fotky napřímo', () => q(`insert into media (wedding_id, album_id, kind, storage_key, content_type, bytes) values ($1,$2,'photo','x/y.jpg','image/jpeg',10)`, [wid, galb.id]), 'row-level');
+await as('service_role');
+const usedBefore = (await q(`select gallery_used_bytes::int b from weddings where id=$1`, [wid]))[0].b;
+const [gph] = await q(`insert into media (wedding_id, album_id, kind, storage_key, content_type, bytes, status) values ($1,$2,'photo',$3,'image/jpeg',1000,'pending') returning id`, [wid, galb.id, `${wid}/a/original.jpg`]);
+check('místo v galerii se počítá', (await q(`select gallery_used_bytes::int b from weddings where id=$1`, [wid]))[0].b === usedBefore + 1000);
+await q(`insert into guestbook_entries (wedding_id, name, message) values ($1, 'Teta', 'Hodně štěstí!')`, [wid]);
+await as('authenticated', owner.id);
+await q(`update media set status='approved' where id=$1`, [gph.id]);
+check('pár schválí fotku', (await q(`select status from media where id=$1`, [gph.id]))[0].status === 'approved');
+await expectError('pár nemění velikost fotky', () => q(`update media set bytes=1 where id=$1`, [gph.id]), 'media_fields_locked');
+check('pár čte knihu přání', (await q(`select count(*)::int c from guestbook_entries where wedding_id=$1`, [wid]))[0].c === 1);
+await expectError('pár nepíše za hosty', () => q(`insert into guestbook_entries (wedding_id, name, message) values ($1, 'X', 'Y')`, [wid]), 'row-level');
+await q(`update guestbook_entries set hidden_at=now() where wedding_id=$1`, [wid]);
+await q(`delete from media where id=$1`, [gph.id]);
+check('smazaná fotka uvolní místo', (await q(`select gallery_used_bytes::int b from weddings where id=$1`, [wid]))[0].b === usedBefore);
+await as('authenticated', helper.id);
+check('odebraný člen knihu nečte', (await q(`select count(*)::int c from guestbook_entries where wedding_id=$1`, [wid]))[0].c === 0);
+
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);

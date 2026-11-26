@@ -49,6 +49,7 @@ export const PATH_MODULE: [string, TeamModule][] = [
   ["/app/ubytovani", "lodging"],
   ["/app/web", "web"],
   ["/app/dary", "gifts"],
+  ["/app/galerie", "gallery"],
 ];
 
 export function summarize(p: Permissions): string {

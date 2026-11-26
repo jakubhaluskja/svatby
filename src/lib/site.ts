@@ -23,10 +23,12 @@ export type PublicWedding = {
   rsvp_deadline: string | null;
   /** Náhled konceptu pro člena týmu svatby – hosté ho nevidí. */
   preview: boolean;
+  gallery_enabled: boolean;
+  gallery_token: string;
 };
 
 const FIELDS =
-  "id, slug, partner1_name, partner2_name, wedding_date, timezone, default_locale, locales, template, status, web_expires_at, password_scope, rsvp_deadline, suspended_at";
+  "id, slug, partner1_name, partner2_name, wedding_date, timezone, default_locale, locales, template, status, web_expires_at, password_scope, rsvp_deadline, suspended_at, gallery_enabled, gallery_token";
 
 /** Parametr route /site/[site]: slug, nebo hostname vlastní domény (obsahuje tečku). */
 export function isCustomDomainParam(site: string): boolean {
