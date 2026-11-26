@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { FormMessage } from "@/components/ui";
 import { guestName, guestStatus, loadGuestBook } from "@/lib/guest-data";
 import { householdUrl } from "@/lib/hosts";
+import { answerLabel, type Question } from "@/lib/rsvp-questions";
 import { createClient } from "@/lib/supabase/server";
 import { requireWedding } from "@/lib/wedding";
 import { deleteHousehold, saveRsvpDetails } from "../actions";
@@ -24,7 +25,18 @@ export default async function HouseholdPage({ params, searchParams }: Props) {
   const h = book.households[0];
   if (!h) notFound();
 
-  const { data: inv } = await supabase.from("households").select("invited_at").eq("id", h.id).maybeSingle();
+  const [{ data: inv }, { data: qs }, { data: ans }] = await Promise.all([
+    supabase.from("households").select("invited_at").eq("id", h.id).maybeSingle(),
+    supabase.from("rsvp_questions").select("id, label, kind, options").eq("wedding_id", wedding.id).order("sort").order("created_at"),
+    supabase.from("rsvp_answers").select("question_id, guest_id, value").eq("household_id", h.id),
+  ]);
+  const nameOfGuest = new Map(h.guests.map((g) => [g.id, [g.first_name, g.last_name].filter(Boolean).join(" ")]));
+  const answerRows = (ans ?? [])
+    .map((a) => {
+      const q = (qs ?? []).find((x) => x.id === a.question_id) as Pick<Question, "id" | "label" | "kind" | "options"> | undefined;
+      return q ? { q: q.label.cs || q.label.en || "Otázka", who: a.guest_id ? nameOfGuest.get(a.guest_id) ?? "" : "", value: answerLabel(q, a.value) } : null;
+    })
+    .filter((x): x is { q: string; who: string; value: string } => !!x);
   const invitedAt = inv?.invited_at ?? null;
   const events = book.events.filter((e) => h.event_ids.includes(e.id));
   const category = new Map(book.categories.map((c) => [c.id, c.label]));
@@ -139,6 +151,16 @@ export default async function HouseholdPage({ params, searchParams }: Props) {
               <input name="song_wish" defaultValue={h.song_wish ?? ""} className={fieldCls} maxLength={200} />
             </label>
           </div>
+          {answerRows.length ? (
+            <div className="flex flex-col gap-1.5 rounded-xl bg-paper px-4 py-3 text-sm">
+              <span className="text-ink-soft">Odpovědi na vaše otázky</span>
+              {answerRows.map((r, i) => (
+                <p key={i}>
+                  <span className="text-ink-soft">{r.q}{r.who ? ` (${r.who})` : ""}:</span> <span className="font-medium">{r.value}</span>
+                </p>
+              ))}
+            </div>
+          ) : null}
           {h.message ? (
             <blockquote className="border-l-2 border-eucalyptus pl-4 text-ink-soft">
               <span className="block text-sm">Vzkaz od hostů</span>

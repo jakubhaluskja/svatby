@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { dietNotes, guestStatus, highChairs, loadGuestBook, summarize } from "@/lib/guest-data";
+import { answerLabel, type Question } from "@/lib/rsvp-questions";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentWedding } from "@/lib/wedding";
 
@@ -11,7 +12,17 @@ export async function GET() {
   if (!wedding) return new Response("Nepřihlášen", { status: 401 });
 
   const supabase = await createClient();
-  const book = await loadGuestBook(supabase, wedding.id);
+  const [book, { data: qs }, { data: ans }] = await Promise.all([
+    loadGuestBook(supabase, wedding.id),
+    supabase.from("rsvp_questions").select("id, label, kind, options, scope").eq("wedding_id", wedding.id).order("sort").order("created_at"),
+    supabase.from("rsvp_answers").select("question_id, household_id, guest_id, value").eq("wedding_id", wedding.id),
+  ]);
+  const questions = (qs ?? []) as Pick<Question, "id" | "label" | "kind" | "options" | "scope">[];
+  const answerOf = (qid: string, householdId: string, guestId: string) => {
+    const q = questions.find((x) => x.id === qid)!;
+    const a = (ans ?? []).find((x) => x.question_id === qid && (q.scope === "guest" ? x.guest_id === guestId : x.household_id === householdId && !x.guest_id));
+    return a ? answerLabel(q, a.value) : "";
+  };
   const category = new Map(book.categories.map((c) => [c.id, c.label]));
 
   const wb = new ExcelJS.Workbook();
@@ -32,6 +43,7 @@ export async function GET() {
     { header: "Štítky", key: "tags", width: 20 },
     { header: "Ubytování", key: "lodging", width: 12 },
     { header: "Písnička", key: "song", width: 22 },
+    ...questions.map((q) => ({ header: q.label.cs || q.label.en || "Otázka", key: `q_${q.id}`, width: 18 })),
     { header: "E-mail", key: "email", width: 24 },
     { header: "Kód", key: "code", width: 9 },
   ];
@@ -52,6 +64,7 @@ export async function GET() {
         email: g.email ?? h.email ?? "",
         code: h.short_code,
       };
+      for (const q of questions) row[`q_${q.id}`] = answerOf(q.id, h.id, g.id);
       for (const e of book.events) {
         const s = guestStatus(h, g, e.id);
         row[`ev_${e.id}`] = s ? STATUS[s] : "Nepozván";

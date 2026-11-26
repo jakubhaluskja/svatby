@@ -6,8 +6,9 @@ import { after } from "next/server";
 import { linkDomain } from "@/lib/domain";
 import { sendRsvpConfirmation } from "@/lib/email/guest-mail";
 import { formatEventTime } from "@/lib/time";
+import { checkAnswers, localizeQuestions } from "@/lib/rsvp-questions";
 import { z } from "zod";
-import { householdByToken, resolveWedding, siteBase, tokenByShortCode } from "@/lib/site";
+import { householdByToken, resolveWedding, rsvpQuestions, siteBase, tokenByShortCode } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type CodeState = { error?: boolean };
@@ -54,9 +55,13 @@ const payloadSchema = z.object({
   song_wish: text(200),
   message: text(2000),
   email: z.union([z.literal(""), z.string().trim().email()]),
+  answers: z
+    .array(z.object({ question_id: z.string().uuid(), guest_id: z.string().uuid().nullable(), value: z.string().max(500) }))
+    .max(400)
+    .default([]),
 });
 
-export type RsvpPayload = z.infer<typeof payloadSchema>;
+export type RsvpPayload = z.input<typeof payloadSchema>;
 export type RsvpResult = { ok?: boolean; error?: "closed" | "plus_ones" | "invalid" | "failed" | "preview" };
 
 export async function submitRsvp(site: string, token: string, payload: RsvpPayload): Promise<RsvpResult> {
@@ -75,11 +80,21 @@ export async function submitRsvp(site: string, token: string, payload: RsvpPaylo
   const complete = parsed.data.guests.every((g) => invited.every((id) => g.events[id]));
   if (!complete) return { error: "invalid" };
 
+  // Vlastní otázky: jen platné odpovědi, povinné vyplněné.
+  const { questions } = await rsvpQuestions(wedding.id, null);
+  const localized = localizeQuestions(questions, "cs");
+  const checked = checkAnswers(localized, parsed.data.answers, {
+    invitedEvents: invited,
+    guests: parsed.data.guests.map((g) => ({ id: g.id, attending: g.events })),
+  });
+  if (!checked.ok) return { error: "invalid" };
+
   const db = createAdminClient();
+  const rest = { ...parsed.data, answers: undefined };
   const { error } = await db.rpc("submit_household_rsvp", {
     p_token: token,
     p_payload: {
-      ...parsed.data,
+      ...rest,
       guests: parsed.data.guests.map((g) => ({ ...g, diet: g.diet, allergies: g.allergies })),
     },
   });
@@ -89,6 +104,16 @@ export async function submitRsvp(site: string, token: string, payload: RsvpPaylo
     if (error.message.includes("too_many_plus_ones")) return { error: "plus_ones" };
     console.error("submit_household_rsvp", error);
     return { error: "failed" };
+  }
+
+  if (questions.length) {
+    await db.from("rsvp_answers").delete().eq("household_id", household.id).in("question_id", questions.map((q) => q.id));
+    if (checked.answers.length) {
+      const { error: aErr } = await db
+        .from("rsvp_answers")
+        .insert(checked.answers.map((a) => ({ ...a, wedding_id: wedding.id, household_id: household.id })));
+      if (aErr) console.error("rsvp_answers", aErr);
+    }
   }
 
   // Potvrzení e-mailem až po odeslání odpovědi (host nečeká).

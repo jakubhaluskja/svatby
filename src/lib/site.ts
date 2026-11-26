@@ -449,3 +449,16 @@ export async function giftList(weddingId: string, locale: Locale, householdId: s
     };
   });
 }
+
+/** Vlastní otázky RSVP a dosavadní odpovědi domácnosti. */
+export async function rsvpQuestions(weddingId: string, householdId: string | null): Promise<{ questions: import("@/lib/rsvp-questions").Question[]; answers: import("@/lib/rsvp-questions").Answer[] }> {
+  const db = createAdminClient();
+  const [{ data: questions }, { data: answers }] = await Promise.all([
+    db.from("rsvp_questions").select("id, label, help, kind, options, scope, required, only_coming, event_id, sort").eq("wedding_id", weddingId).order("sort").order("created_at"),
+    householdId ? db.from("rsvp_answers").select("question_id, guest_id, value").eq("household_id", householdId) : Promise.resolve({ data: [] }),
+  ]);
+  return {
+    questions: (questions ?? []) as import("@/lib/rsvp-questions").Question[],
+    answers: (answers ?? []) as import("@/lib/rsvp-questions").Answer[],
+  };
+}

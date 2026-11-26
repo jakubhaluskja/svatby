@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LanguageSwitch } from "@/components/site/language-switch";
+import { localizeQuestions } from "@/lib/rsvp-questions";
 import { PhotosBand } from "@/components/site/photos-band";
 import { SiteView } from "@/components/site/site-view";
 import { buildSiteModel } from "@/lib/site-model";
 import { SiteShell } from "@/components/site/site-shell";
-import { siteBase, householdByToken, householdRooms, householdTables, localizeEvents, pickLocale, resolveWedding, siteContent, siteNotices } from "@/lib/site";
+import { rsvpQuestions, siteBase, householdByToken, householdRooms, householdTables, localizeEvents, pickLocale, resolveWedding, siteContent, siteNotices } from "@/lib/site";
 import { SiteNotices } from "@/components/site/site-notices";
 import { siteCopy } from "@/lib/site-copy";
 import { RsvpForm } from "./rsvp-form";
@@ -38,7 +39,7 @@ export default async function HouseholdSite({ params, searchParams }: Props) {
     : null;
   const invited = household.events.some((e) => e.invited);
   const events = localizeEvents(household.events, locale);
-  const [tables, rooms] = await Promise.all([householdTables(wedding, household, locale), householdRooms(household, locale)]);
+  const [tables, rooms, rsvp] = await Promise.all([householdTables(wedding, household, locale), householdRooms(household, locale), rsvpQuestions(wedding.id, household.id)]);
   const notices = await siteNotices(wedding, events, locale, household.events.filter((e) => e.invited).map((e) => e.id));
 
   const model = await buildSiteModel(wedding, content, events, locale, {
@@ -103,6 +104,8 @@ export default async function HouseholdSite({ params, searchParams }: Props) {
                     locale={locale}
                     disabled={wedding.preview}
                     disabledText={wedding.preview ? copy.previewRsvp : null}
+                    questions={localizeQuestions(rsvp.questions, locale)}
+                    initialAnswers={rsvp.answers}
                   />
                 )}
               </div>

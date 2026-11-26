@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { GuestHousehold } from "@/lib/site";
 import type { Locale } from "@/lib/i18n";
+import { applies, checkAnswers, type Answer, type GuestQuestion } from "@/lib/rsvp-questions";
 import { siteCopy, type SiteCopy } from "@/lib/site-copy";
 import { submitRsvp, type RsvpPayload } from "../../actions";
 
@@ -21,6 +22,8 @@ export function RsvpForm({
   locale,
   disabled,
   disabledText,
+  questions = [],
+  initialAnswers = [],
 }: {
   site: string;
   token: string;
@@ -28,6 +31,8 @@ export function RsvpForm({
   locale: Locale;
   disabled: boolean;
   disabledText: string | null;
+  questions?: GuestQuestion[];
+  initialAnswers?: Answer[];
 }) {
   const copy = siteCopy(locale);
   const events = household.events.filter((e) => e.invited);
@@ -58,6 +63,20 @@ export function RsvpForm({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
+  const [answers, setAnswers] = useState<Record<string, string>>(() =>
+    Object.fromEntries(initialAnswers.map((a) => [`${a.question_id}|${a.guest_id ?? ""}`, a.value])),
+  );
+  const answer = (qid: string, guestId: string | null) => answers[`${qid}|${guestId ?? ""}`] ?? "";
+  const setAnswer = (qid: string, guestId: string | null, value: string) => {
+    setAnswers((a) => ({ ...a, [`${qid}|${guestId ?? ""}`]: value }));
+    setDone(false);
+  };
+  const invitedIds = events.map((e) => e.id);
+  const householdAttending = Object.fromEntries(
+    events.map((e) => [e.id, [...guests, ...plusOnes].some((g) => g.events[e.id] === "yes") ? ("yes" as const) : guests.some((g) => g.events[e.id] === "no") ? ("no" as const) : undefined]),
+  );
+  const householdQuestions = questions.filter((q) => q.scope === "household" && applies(q, { invitedEvents: invitedIds, attending: householdAttending }));
+  const guestQuestions = (g: GuestState) => questions.filter((q) => q.scope === "guest" && applies(q, { invitedEvents: invitedIds, attending: g.events }));
 
   const anyoneComing = [...guests, ...plusOnes].some((g) => Object.values(g.events).includes("yes"));
   const answered = !!household.rsvp_submitted_at;
@@ -77,6 +96,17 @@ export function RsvpForm({
     const incomplete = guests.some((g) => events.some((ev) => !g.events[ev.id])) || plusOnes.some((p) => !p.first_name.trim() || events.some((ev) => !p.events[ev.id]));
     if (incomplete) {
       setError(copy.chooseAll);
+      return;
+    }
+    const answerList: Answer[] = Object.entries(answers)
+      .filter(([, v]) => v.trim())
+      .map(([key, value]) => {
+        const [question_id, guest] = key.split("|");
+        return { question_id, guest_id: guest || null, value };
+      });
+    const check = checkAnswers(questions, answerList, { invitedEvents: invitedIds, guests: guests.map((g) => ({ id: g.id, attending: g.events })) });
+    if (!check.ok) {
+      setError(locale === "en" ? "Please answer the required questions (marked *)." : "Odpovězte prosím na povinné otázky (označené *).");
       return;
     }
     const payload: RsvpPayload = {
@@ -101,6 +131,7 @@ export function RsvpForm({
       song_wish: song,
       message,
       email,
+      answers: check.answers,
     };
     start(async () => {
       const result = await submitRsvp(site, token, payload);
@@ -144,7 +175,11 @@ export function RsvpForm({
             onDiet={(diet) => setGuest(g.id, { diet })}
             onAllergies={(allergies) => setGuest(g.id, { allergies })}
             copy={copy}
-          />
+          >
+            {guestQuestions(g).map((q) => (
+              <QuestionField key={q.id} q={q} value={answer(q.id, g.id)} onChange={(v) => setAnswer(q.id, g.id, v)} locale={locale} />
+            ))}
+          </PersonBlock>
         ))}
 
         {plusOnes.map((p, i) => (
@@ -189,6 +224,14 @@ export function RsvpForm({
           >
             {copy.plusOneAdd}
           </button>
+        ) : null}
+
+        {householdQuestions.length ? (
+          <div className="flex flex-col gap-5 border-t pt-6" style={{ borderColor: "var(--site-line)" }}>
+            {householdQuestions.map((q) => (
+              <QuestionField key={q.id} q={q} value={answer(q.id, null)} onChange={(v) => setAnswer(q.id, null, v)} locale={locale} />
+            ))}
+          </div>
         ) : null}
 
         {anyoneComing ? (
@@ -276,6 +319,7 @@ function PersonBlock({
   onAllergies,
   copy,
   bare,
+  children,
 }: {
   name: string;
   editableName: { first: string; last: string; onChange: (first: string, last: string) => void } | null;
@@ -288,6 +332,7 @@ function PersonBlock({
   onAllergies: (v: string) => void;
   copy: SiteCopy;
   bare?: boolean;
+  children?: React.ReactNode;
 }) {
   const coming = Object.values(value).includes("yes");
   return (
@@ -323,6 +368,54 @@ function PersonBlock({
           </label>
         </div>
       ) : null}
+      {children}
     </div>
+  );
+}
+
+/** Vlastní otázka páru (text, ano/ne, výběr). */
+function QuestionField({ q, value, onChange, locale }: { q: GuestQuestion; value: string; onChange: (v: string) => void; locale: Locale }) {
+  const label = (
+    <span className="font-medium">
+      {q.label}
+      {q.required ? <span style={{ color: "var(--site-accent)" }}> *</span> : null}
+    </span>
+  );
+  const help = q.help ? <span className="text-sm" style={{ color: "var(--site-muted)" }}>{q.help}</span> : null;
+  if (q.kind === "text") {
+    return (
+      <label className="flex flex-col gap-1.5">
+        {label}
+        {help}
+        <input value={value} onChange={(e) => onChange(e.target.value)} className={field} style={fieldStyle} maxLength={500} />
+      </label>
+    );
+  }
+  const options = q.kind === "yesno" ? [{ id: "yes", label: locale === "en" ? "Yes" : "Ano" }, { id: "no", label: locale === "en" ? "No" : "Ne" }] : q.options;
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1 flex flex-col gap-0.5">
+        {label}
+        {help}
+      </legend>
+      {options.length > 5 ? (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={field} style={fieldStyle}>
+          <option value="">{locale === "en" ? "Choose…" : "Vyberte…"}</option>
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <div className="flex flex-wrap gap-2" role="radiogroup">
+          {options.map((o) => (
+            <Choice key={o.id} selected={value === o.id} onClick={() => onChange(value === o.id && !q.required ? "" : o.id)}>
+              {o.label}
+            </Choice>
+          ))}
+        </div>
+      )}
+    </fieldset>
   );
 }

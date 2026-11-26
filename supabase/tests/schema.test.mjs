@@ -445,5 +445,19 @@ check('smazaná fotka uvolní místo', (await q(`select gallery_used_bytes::int 
 await as('authenticated', helper.id);
 check('odebraný člen knihu nečte', (await q(`select count(*)::int c from guestbook_entries where wedding_id=$1`, [wid]))[0].c === 0);
 
+
+// --- vlastní otázky v RSVP
+await as('authenticated', owner.id);
+const [qq] = await q(`insert into rsvp_questions (wedding_id, label, kind, options, scope) values ($1, '{"cs":"Jídlo"}', 'choice', '[{"id":"a","cs":"Maso"},{"id":"b","cs":"Vege"}]', 'guest') returning id`, [wid]);
+await expectError('výběr potřebuje aspoň dvě možnosti', () => q(`insert into rsvp_questions (wedding_id, label, kind, options) values ($1, '{"cs":"X"}', 'choice', '[{"id":"a"}]')`, [wid]), 'check');
+const [qg] = await q(`select g.id, g.household_id from guests g where g.wedding_id=$1 limit 1`, [wid]);
+await as('service_role');
+await q(`insert into rsvp_answers (wedding_id, question_id, household_id, guest_id, value) values ($1,$2,$3,$4,'a')`, [wid, qq.id, qg.household_id, qg.id]);
+await expectError('jedna odpověď na hosta', () => q(`insert into rsvp_answers (wedding_id, question_id, household_id, guest_id, value) values ($1,$2,$3,$4,'b')`, [wid, qq.id, qg.household_id, qg.id]), 'duplicate');
+await as('authenticated', owner.id);
+check('pár vidí odpovědi', (await q(`select count(*)::int c from rsvp_answers where question_id=$1`, [qq.id]))[0].c === 1);
+await as('authenticated', helper.id);
+check('cizí odpovědi nevidí', (await q(`select count(*)::int c from rsvp_answers where question_id=$1`, [qq.id]))[0].c === 0);
+
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);
