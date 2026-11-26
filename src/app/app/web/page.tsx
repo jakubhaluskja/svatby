@@ -1,3 +1,5 @@
+import { aiEnabled } from "@/lib/ai";
+import { AiTexts } from "./ai-texts";
 import { linkDomain } from "@/lib/domain";
 import { siteUrl } from "@/lib/hosts";
 import { normalizeSections, type Section } from "@/lib/site-sections";
@@ -114,6 +116,16 @@ export default async function WebEditorPage() {
           }))}
         />
       </section>
+
+      {aiEnabled() && wedding.role !== "coorganizer" ? (
+        <section className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="font-serif text-2xl tracking-tight">Pomoc s texty</h2>
+            <p className="text-sm text-ink-soft">Nevíte, jak začít? Napište pár hesel a dostanete návrh, který si upravíte.</p>
+          </div>
+          <AiTexts />
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-4">
         <h2 className="font-serif text-2xl tracking-tight">Vzhled a nastavení</h2>

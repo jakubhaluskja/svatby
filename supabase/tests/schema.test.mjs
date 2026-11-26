@@ -464,5 +464,14 @@ check('cizí odpovědi nevidí', (await q(`select count(*)::int c from rsvp_answ
 await as('postgres');
 check('člen má odkaz na kalendář', (await q(`select count(*)::int c from wedding_members where calendar_token is null`))[0].c === 0);
 
+
+// --- výběr místa
+await as('authenticated', owner.id);
+await q(`insert into venue_options (wedding_id, name, price, capacity, rating) values ($1, 'Zámek', 120000, 90, 5)`, [wid]);
+await expectError('hodnocení 1–5', () => q(`insert into venue_options (wedding_id, name, rating) values ($1, 'X', 7)`, [wid]), 'check');
+check('pár vidí místa', (await q(`select count(*)::int c from venue_options where wedding_id=$1`, [wid]))[0].c === 1);
+await as('authenticated', loner.id);
+check('cizí místa nevidí', (await q(`select count(*)::int c from venue_options where wedding_id=$1`, [wid]))[0].c === 0);
+
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);

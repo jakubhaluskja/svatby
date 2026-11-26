@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { Icon } from "@/components/icons";
+import { AiWriter } from "@/components/ai-writer";
 import { FormMessage } from "@/components/ui";
 import { previewEmail, sendEmails, type SendState } from "./actions";
 
@@ -73,12 +74,14 @@ export function Composer({
   only,
   english,
   canSend,
+  aiOn = false,
 }: {
   kind: Kind;
   recipients: Recipient[];
   only: string | null;
   english: boolean;
   canSend: boolean;
+  aiOn?: boolean;
 }) {
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(recipients.filter((r) => (only ? r.id === only && !blocked(r, kind) : defaultChecked(r, kind))).map((r) => r.id)),
@@ -227,6 +230,7 @@ export function Composer({
             placeholder={lang === "en" && kind === "message" ? "Leave empty to send the Czech text to everyone." : undefined}
             className={`${field} py-2.5 leading-relaxed`}
           />
+          {aiOn ? <AiWriter kind={kind} locale={lang} onText={(t) => (lang === "cs" ? setText(t) : setTextEn(t))} /> : null}
           <span className="text-xs font-normal text-ink-soft">
             {kind === "invitation" || kind === "reminder"
               ? "Oslovení, datum, místo, tlačítko s osobním odkazem a kód pozvánky doplníme automaticky."

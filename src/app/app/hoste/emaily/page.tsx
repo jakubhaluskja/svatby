@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { aiEnabled } from "@/lib/ai";
 import { emailEnabled } from "@/lib/email/send";
 import { createClient } from "@/lib/supabase/server";
 import { moduleLevel, requireWedding } from "@/lib/wedding";
@@ -113,6 +114,7 @@ export default async function GuestEmails({ searchParams }: Props) {
           only={domacnost && /^[0-9a-f-]{36}$/.test(domacnost) ? domacnost : null}
           english={(w?.locales ?? []).includes("en") || recipients.some((r) => r.locale === "en")}
           canSend={level === "write" && emailEnabled()}
+          aiOn={aiEnabled() && level === "write"}
         />
       ) : (
         <section className="overflow-x-auto rounded-2xl bg-surface shadow-card ring-1 ring-line/70">
