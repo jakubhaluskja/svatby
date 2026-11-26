@@ -1,6 +1,6 @@
 # Svatební platforma – přehled projektu a záloha rozhodnutí
 
-Stav k 26. 11. 2026. Kód: github.com/jakubhaluskja/svatby (větev `main`, záloha i jako tag `zaloha-2026-11-26`).
+Stav k 26. 11. 2026. Kód: github.com/jakubhaluskja/svatby (větev `main`, stav zálohy = commit „Přehled projektu a záloha rozhodnutí“).
 Živá aplikace: https://svatby-liard.vercel.app · Databáze: Supabase projekt `idunrfgroymfeusefupz` (eu-west-1).
 
 ## 1. Produkt a obchodní rozhodnutí
