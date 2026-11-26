@@ -459,5 +459,10 @@ check('pár vidí odpovědi', (await q(`select count(*)::int c from rsvp_answers
 await as('authenticated', helper.id);
 check('cizí odpovědi nevidí', (await q(`select count(*)::int c from rsvp_answers where question_id=$1`, [qq.id]))[0].c === 0);
 
+
+// --- kalendář
+await as('postgres');
+check('člen má odkaz na kalendář', (await q(`select count(*)::int c from wedding_members where calendar_token is null`))[0].c === 0);
+
 console.log(failures ? `\n${failures} testů selhalo` : '\nVšechny testy prošly');
 process.exit(failures ? 1 : 0);

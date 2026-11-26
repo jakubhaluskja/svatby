@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import "@fontsource-variable/bricolage-grotesque";
 import "@fontsource-variable/fraunces";
@@ -14,7 +14,11 @@ import { HashSession } from "@/components/hash-session";
 export const metadata: Metadata = {
   title: { default: "Svatební web a plánovač", template: "%s | Svatby" },
   description: "Svatební web s potvrzením účasti a kompletní plánovač svatby na jednom místě.",
+  appleWebApp: { capable: true, title: "Svatby", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
+
+export const viewport: Viewport = { themeColor: "#f5f7f5" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

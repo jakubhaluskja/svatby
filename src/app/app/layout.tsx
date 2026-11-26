@@ -3,6 +3,7 @@ import { daysUntil, formatWeddingDate } from "@/components/site/site-hero";
 import { createClient } from "@/lib/supabase/server";
 import { utcToZonedParts } from "@/lib/time";
 import { REASON_LABEL, impersonatedBy } from "@/lib/admin";
+import { RegisterServiceWorker } from "@/components/pwa";
 import { PATH_MODULE, type Permissions } from "@/lib/team";
 import { getCurrentWedding, requireUser } from "@/lib/wedding";
 import { signOut } from "../(auth)/actions";
@@ -69,6 +70,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <>
+    <RegisterServiceWorker />
     {impersonation}
     <div className="flex min-h-svh flex-col lg:flex-row">
       <Sidebar

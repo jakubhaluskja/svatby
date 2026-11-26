@@ -35,7 +35,13 @@ const GROUPS: { label: string | null; items: Item[] }[] = [
       { href: "/app/galerie", label: "Fotogalerie", icon: "camera" },
     ],
   },
-  { label: "Nastavení", items: [{ href: "/app/tym", label: "Tým svatby", icon: "user" }] },
+  {
+    label: "Nastavení",
+    items: [
+      { href: "/app/tym", label: "Tým svatby", icon: "user" },
+      { href: "/app/telefon", label: "Do telefonu", icon: "phone" },
+    ],
+  },
 ];
 
 export type SidebarProps = {
