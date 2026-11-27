@@ -52,7 +52,7 @@ Stav k 26. 11. 2026. Kód: github.com/jakubhaluskja/svatby (větev `main`, stav 
 - Zasedací pořádek: stoly se židlemi, pravidla (spolu/zvlášť/pevný stůl), automatické rozsazení, tisk; na mobilu seznam s přesazováním.
 - Ubytování po pokojích (noci, kdo platí), tisk.
 - Tiskoviny ve stylu šablony: jmenovky, čísla stolů, rozpis u vchodu, menu.
-- Svatební web: 5 šablon (Pozvánka, Herbář, Magazín, Hvězdná noc, Folklor), WYSIWYG editor přímo na webu, zprávy hostům, heslo, čeština/angličtina, AI návrhy textů (uvítání, příběh).
+- Svatební web: 5 šablon (Pozvánka, Herbář, Magazín, Hvězdná noc, Folklor), WYSIWYG editor přímo na webu (sekce přesouvané tažením, vlastní sekce s fotkami, hlavní informace sraz/obřad/hostina s mapou, galerie páru, dress code s barvami, svatební menu, kontakty s fotkou, FAQ), zprávy hostům, heslo, čeština/angličtina, AI návrhy textů (uvítání, příběh).
 - Dary: věci k rezervaci, příspěvky a skupinové dary s QR platbou na účet páru, režim překvapení, obdržené dary a poděkování.
 - Fotogalerie: nahrávání hostů přes QR bez aplikace, alba, schvalování, kniha přání, živá prezentace na projektor; 10 GB zdarma do spuštění plateb.
 - Tým svatby: partner a spoluorganizátoři s oprávněními po modulech (předvolby svědek/rodiče/koordinátor, rozpočet „jen svůj příspěvek“), pozvánky e-mailem/odkazem.
