@@ -1,11 +1,12 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { FONTS } from "@/lib/templates";
 import type { Section } from "@/lib/site-sections";
 import { LineText, RichText, Sec, SitePhoto, useEdit } from "../edit";
 import type { SiteModel } from "../model";
 import { ContactList, EventsHint, FaqList, GiftAccount, RsvpSlot, Title, address, fmtDate, grain, mapUrl, place, textOf, useSections, when } from "./shared";
+import { KeyInfo, SectionExtras, type ExtrasTheme } from "./extras";
 
 const red = "#b01e2d";
 const blue = "#1e3a6d";
@@ -54,6 +55,8 @@ const WORDS = {
   cs: { tagline: "Zveme vás na svatbu", at: "obřad v", hour: "" },
   en: { tagline: "You are invited to our wedding", at: "ceremony at", hour: "" },
 };
+
+const THEME: ExtrasTheme = { accent: red, line: "#e2d8c8", display: gloock, card: "bg-white" };
 
 export function FolklorSite({ model }: { model: SiteModel }) {
   const { locale, update } = useEdit();
@@ -138,17 +141,21 @@ export function FolklorSite({ model }: { model: SiteModel }) {
       case "location":
       case "dresscode":
       case "accommodation":
+      case "gallery":
+      case "menu":
+      case "custom":
       case "gifts": {
-        const i = ["location", "dresscode", "accommodation", "gifts"].indexOf(s.type);
+        const i = sections.indexOf(s) % 4;
         return (
-          <Sec key={s.type} s={s} className="mx-auto max-w-[920px] px-5 py-14 @3xl:px-10">
+          <Sec key={s.id} s={s} className="mx-auto max-w-[920px] px-5 py-14 @3xl:px-10">
             <div className="relative bg-white px-7 pb-12 pt-14 @3xl:px-14" style={{ boxShadow: `inset 0 0 0 10px white, inset 0 0 0 11.5px ${[blue, red, green, ochre][i]}` }}>
               <div className="absolute -top-6 left-1/2 -translate-x-1/2 rounded-full bg-white px-4 py-2">
                 <Stitch rows={MOTIFS[(i + 1) % MOTIFS.length]} cell={4} />
               </div>
               <Title s={s} className="block text-center text-[clamp(40px,7cqw,60px)] leading-none" style={{ ...gloock, color: red }} />
               {s.type === "location" ? <SitePhoto path={s.content.photo} onPath={(p) => update("location", { photo: p })} className="mt-8 aspect-[16/9]" placeholder={<div className="absolute inset-0" style={{ background: "linear-gradient(160deg,#f3e9da,#d9c3a2)" }} />} /> : null}
-              <RichText type={s.type} field="text" value={textOf(s)} className="mx-auto mt-8 max-w-[58ch] text-[19px] leading-relaxed @3xl:text-[21px]" />
+              <RichText type={s.id} field="text" value={textOf(s)} className="mx-auto mt-8 max-w-[58ch] text-[19px] leading-relaxed @3xl:text-[21px]" />
+                <SectionExtras s={s} theme={THEME} />
               {s.type === "gifts" ? <GiftAccount model={model} s={s} className="mt-10 border-t pt-8" style={{ borderColor: "#e2d8c8" }} /> : null}
             </div>
           </Sec>
@@ -190,7 +197,7 @@ export function FolklorSite({ model }: { model: SiteModel }) {
     <div className="@container relative min-h-svh overflow-hidden" style={{ background: linen, color: "#2a2320", fontFamily: FONTS.instrument }}>
       <div className="pointer-events-none absolute inset-0 opacity-[.1]" style={grain} />
       {model.banner}
-      <div className="relative">{sections.map(render)}</div>
+      <div className="relative">{sections.map((s) => (s.type === "hero" ? <Fragment key={s.id}>{render(s)}<KeyInfo s={s} model={model} theme={THEME} className="py-12" /></Fragment> : render(s)))}</div>
       <div className="relative pb-10 pt-6">
         <Band />
       </div>

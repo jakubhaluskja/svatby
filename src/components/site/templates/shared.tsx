@@ -6,7 +6,7 @@ import type { Locale } from "@/lib/i18n";
 import { formatIban } from "@/lib/payment-qr";
 import { GIFT_COPY, SECTION_TITLES } from "@/lib/site-copy";
 import { lt, type LText, type Section, type SectionContent, type SectionType } from "@/lib/site-sections";
-import { AddButton, FieldText, LineText, RemoveButton, RichText, hasText, useEdit } from "../edit";
+import { AddButton, AvatarPhoto, FieldText, LineText, RemoveButton, RichText, hasText, useEdit } from "../edit";
 import type { SiteModel, WebEvent } from "../model";
 import { GiftList } from "./gift-list";
 
@@ -30,8 +30,15 @@ function hasContent(s: Section, model: SiteModel): boolean {
     case "location":
       return hasText(s.content.text, loc) || !!s.content.photo;
     case "dresscode":
+      return hasText(s.content.text, loc) || s.content.colors.length > 0 || s.content.photos.length > 0;
     case "accommodation":
       return hasText(s.content.text, loc);
+    case "gallery":
+      return s.content.photos.length > 0;
+    case "custom":
+      return hasText(s.content.title, loc) || hasText(s.content.text, loc) || s.content.photos.length > 0;
+    case "menu":
+      return hasText(s.content.text, loc) || s.content.courses.some((c) => hasText(c.name, loc) || hasText(c.dishes, loc));
     case "gifts":
       return hasText(s.content.text, loc) || (s.content.show_account && !!model.gifts.iban) || !!model.giftList?.items.length;
     case "faq":
@@ -45,14 +52,15 @@ function hasContent(s: Section, model: SiteModel): boolean {
 
 export function defaultTitle(type: SectionType, locale: Locale): string {
   if (type === "hero") return "";
-  return SECTION_TITLES[locale][type as keyof (typeof SECTION_TITLES)["cs"]];
+  return SECTION_TITLES[locale][type as keyof (typeof SECTION_TITLES)["cs"]] ?? "";
 }
 
 /** Nadpis sekce: vlastní, nebo výchozí; v editoru se dá přepsat. */
 export function Title({ s, className = "", style, as = "h2" }: { s: Section; className?: string; style?: CSSProperties; as?: "h2" | "h3" | "p" | "span" }) {
   const { locale } = useEdit();
   const value = (s.content as { title?: LText }).title;
-  return <LineText type={s.type} field="title" value={value} fallback={defaultTitle(s.type, locale)} as={as} className={className} style={style} />;
+  const fallback = defaultTitle(s.type, locale) || (s.type === "custom" ? (locale === "cs" ? "Nadpis sekce" : "Section title") : "");
+  return <LineText type={s.id} field="title" value={value} fallback={fallback} as={as} className={className} style={style} />;
 }
 
 export function fmtDate(date: string | null, locale: Locale, opts: Intl.DateTimeFormatOptions): string | null {
@@ -141,7 +149,7 @@ export function FaqList({ s, className = "", qClass = "", aClass = "", lineColor
 export function ContactList({ s, className = "", itemClass = "", nameClass = "", accent }: { s: Extract<Section, { type: "contacts" }>; className?: string; itemClass?: string; nameClass?: string; accent: string }) {
   const { editing, locale, update } = useEdit();
   const items = s.content.items;
-  const set = (next: SectionContent<"contacts">["items"]) => update("contacts", { items: next });
+  const set = (next: SectionContent<"contacts">["items"]) => update(s.id, { items: next });
   const c = COPY[locale];
   const patch = (i: number, p: Partial<(typeof items)[number]>) => set(items.map((x, k) => (k === i ? { ...x, ...p } : x)));
   return (
@@ -151,6 +159,7 @@ export function ContactList({ s, className = "", itemClass = "", nameClass = "",
           !editing && !it.name ? null : (
             <li key={i} className={`relative flex flex-col gap-1 ${itemClass}`}>
               <RemoveButton onClick={() => set(items.filter((_, k) => k !== i))} label="Smazat kontakt" />
+              <AvatarPhoto path={it.photo} onPath={(p) => patch(i, { photo: p })} className="mb-2 size-20" />
               <FieldText value={it.name} onValue={(v) => patch(i, { name: v })} placeholder={c.name} className={nameClass} />
               <LineText value={it.role} onValue={(v) => patch(i, { role: v })} fallback={editing ? "" : ""} className="opacity-70" />
               {editing ? (
@@ -168,7 +177,7 @@ export function ContactList({ s, className = "", itemClass = "", nameClass = "",
           ),
         )}
       </ul>
-      <AddButton onClick={() => set([...items, { name: "", role: { cs: "", en: "" }, phone: "", email: "" }])}>{c.addContact}</AddButton>
+      <AddButton onClick={() => set([...items, { name: "", role: { cs: "", en: "" }, phone: "", email: "", photo: null }])}>{c.addContact}</AddButton>
     </div>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { FONTS } from "@/lib/templates";
 import type { Section } from "@/lib/site-sections";
 import { LineText, RichText, Sec, SitePhoto, useEdit } from "../edit";
 import type { SiteModel } from "../model";
 import { deckle } from "./deckle";
 import { ContactList, EventsHint, FaqList, GiftAccount, RsvpSlot, Title, address, fmtDate, grain, mapUrl, place, textOf, useSections, when } from "./shared";
+import { KeyInfo, SectionExtras, type ExtrasTheme } from "./extras";
 
 const ink = "#1f2a44";
 const wax = "#7d1d2c";
@@ -82,6 +83,8 @@ const WORDS = {
   cs: { tagline: "Spolu se svými rodiči vás srdečně zvou na svůj sňatek", and: "a", reply: "Odpovězte prosím", by: "do", story: "Jak to začalo", schedule: "Pořad dne", at: "v", hour: "hodin" },
   en: { tagline: "Together with their families invite you to celebrate their wedding", and: "&", reply: "Kindly reply", by: "by", story: "How it began", schedule: "Order of the day", at: "at", hour: "" },
 };
+
+const THEME: ExtrasTheme = { accent: wax, line: `${ink}22`, display: { fontFamily: FONTS.bodoni }, card: "bg-[#f8f6f1] shadow-[0_14px_24px_rgba(40,30,20,.18)]" };
 
 export function PozvankaSite({ model }: { model: SiteModel }) {
   const { locale } = useEdit();
@@ -219,14 +222,15 @@ export function PozvankaSite({ model }: { model: SiteModel }) {
       case "location":
       case "dresscode":
       case "accommodation": {
-        const i = ["location", "dresscode", "accommodation"].indexOf(s.type);
+        const i = sections.indexOf(s) % 4;
         return (
-          <Sec key={s.type} s={s} className="flex justify-center px-5 pb-20">
-            <Card seed={20 + i} rotate={[1.2, -1.4, 0.8][i]} className="w-full max-w-[640px]">
+          <Sec key={s.id} s={s} className="flex justify-center px-5 pb-20">
+            <Card seed={20 + i} rotate={[1.2, -1.4, 0.8, -0.6][i]} className="w-full max-w-[640px]">
               <div className="px-8 py-12 @md:px-14">
                 <Title s={s} className="text-center text-[clamp(42px,8cqw,56px)] leading-none" style={script} />
                 {s.type === "location" ? <SitePhoto path={s.content.photo} onPath={(p) => update(s, { photo: p })} className="mt-8 aspect-[16/9]" placeholder={<div className="absolute inset-0" style={{ background: "linear-gradient(160deg,#e8e2d6,#c9bfae)" }} />} /> : null}
-                <RichText type={s.type} field="text" value={textOf(s)} className="mt-8 text-[19px] leading-relaxed @md:text-[21px]" />
+                <RichText type={s.id} field="text" value={textOf(s)} className="mt-8 text-[19px] leading-relaxed @md:text-[21px]" />
+                <SectionExtras s={s} theme={THEME} />
               </div>
             </Card>
           </Sec>
@@ -294,13 +298,13 @@ export function PozvankaSite({ model }: { model: SiteModel }) {
 
   const { update: upd } = useEdit();
   function update(s: Section, patch: Record<string, unknown>) {
-    upd(s.type, patch);
+    upd(s.id, patch);
   }
 
   return (
     <div className="@container min-h-svh overflow-hidden" style={{ ...linen, color: ink, fontFamily: FONTS.instrument }}>
       {model.banner}
-      {sections.map(render)}
+      {sections.map((s) => (s.type === "hero" ? <Fragment key={s.id}>{render(s)}<KeyInfo s={s} model={model} theme={THEME} className="-mt-4 pb-24" /></Fragment> : render(s)))}
     </div>
   );
 }

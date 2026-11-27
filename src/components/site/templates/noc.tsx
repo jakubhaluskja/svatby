@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useMemo, type CSSProperties, type ReactNode } from "react";
 import { FONTS } from "@/lib/templates";
 import type { Section } from "@/lib/site-sections";
 import { moonPhase, skyMap } from "@/lib/sky";
@@ -8,6 +8,7 @@ import { zonedToUtcIso } from "@/lib/time";
 import { LineText, RichText, Sec, SitePhoto, useEdit } from "../edit";
 import type { SiteModel } from "../model";
 import { ContactList, EventsHint, FaqList, GiftAccount, RsvpSlot, Title, address, fmtDate, mapUrl, place, textOf, useSections, when } from "./shared";
+import { KeyInfo, SectionExtras, type ExtrasTheme } from "./extras";
 
 const sky = "#0f1733";
 const gold = "#d4b47c";
@@ -90,6 +91,8 @@ const WORDS = {
   cs: { tagline: "Pod jedním nebem", sky: (d: string, t: string, p: string) => `Takhle bude vypadat obloha${p ? ` nad místem ${p}` : ""} ${d} ve ${t}, až budeme slavit s vámi.`, and: "a", moon: ["nov", "dorůstající měsíc", "první čtvrť", "dorůstající měsíc", "úplněk", "ubývající měsíc", "poslední čtvrť", "ubývající měsíc"] },
   en: { tagline: "Under one sky", sky: (d: string, t: string, p: string) => `This is the sky${p ? ` above ${p}` : ""} on ${d} at ${t}, when we celebrate with you.`, and: "&", moon: ["new moon", "waxing crescent", "first quarter", "waxing gibbous", "full moon", "waning gibbous", "last quarter", "waning crescent"] },
 };
+
+const THEME: ExtrasTheme = { accent: gold, line: `${gold}44`, display: serif, card: "rounded-2xl border", cardStyle: { borderColor: `${gold}55`, background: "rgba(255,255,255,.03)" }, radius: "rounded-xl" };
 
 export function NocSite({ model }: { model: SiteModel }) {
   const { locale, update } = useEdit();
@@ -187,13 +190,17 @@ export function NocSite({ model }: { model: SiteModel }) {
       case "location":
       case "dresscode":
       case "accommodation":
+      case "gallery":
+      case "menu":
+      case "custom":
       case "gifts":
         return (
-          <Sec key={s.type} s={s} className="mx-auto max-w-[900px] px-6 py-16 @3xl:px-16">
+          <Sec key={s.id} s={s} className="mx-auto max-w-[900px] px-6 py-16 @3xl:px-16">
             <div className="rounded-[28px] border px-7 py-12 @3xl:px-14" style={{ borderColor: `${gold}55`, background: "rgba(255,255,255,.03)" }}>
               <Title s={s} className="block text-center text-[clamp(42px,7cqw,64px)] leading-none" style={serif} />
               {s.type === "location" ? <SitePhoto path={s.content.photo} onPath={(p) => update("location", { photo: p })} className="mt-8 aspect-[16/9] rounded-2xl" placeholder={<div className="absolute inset-0" style={{ background: "radial-gradient(110% 80% at 60% 20%,#3a4d7a,#1b2747 50%,#0b1024)" }} />} /> : null}
-              <RichText type={s.type} field="text" value={textOf(s)} className="mx-auto mt-8 max-w-[56ch] text-[20px] leading-relaxed opacity-90 @3xl:text-[22px]" />
+              <RichText type={s.id} field="text" value={textOf(s)} className="mx-auto mt-8 max-w-[56ch] text-[20px] leading-relaxed opacity-90 @3xl:text-[22px]" />
+                <SectionExtras s={s} theme={THEME} />
               {s.type === "gifts" ? <GiftAccount model={model} s={s} className="mt-10 border-t pt-8" style={{ borderColor: `${gold}44` }} /> : null}
             </div>
           </Sec>
@@ -229,7 +236,7 @@ export function NocSite({ model }: { model: SiteModel }) {
     <div className="@container relative min-h-svh overflow-hidden" style={{ background: sky, color: text, fontFamily: FONTS.instrument }}>
       <Stars />
       {model.banner}
-      <div className="relative">{sections.map(render)}</div>
+      <div className="relative">{sections.map((s) => (s.type === "hero" ? <Fragment key={s.id}>{render(s)}<KeyInfo s={s} model={model} theme={THEME} className="py-12" /></Fragment> : render(s)))}</div>
     </div>
   );
 }

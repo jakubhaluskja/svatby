@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { normalizeSections, parseSectionContent, SECTION_TYPES, type Section, type SectionType } from "@/lib/site-sections";
+import { isRepeatable, normalizeSections, parseSectionContent, SECTION_TYPES, type Section, type SectionType } from "@/lib/site-sections";
 import { createClient } from "@/lib/supabase/server";
 import { isTemplateId } from "@/lib/templates";
 import { requireUser, requireWedding } from "@/lib/wedding";
@@ -34,7 +34,7 @@ const typeSchema = z.enum(SECTION_TYPES as [SectionType, ...SectionType[]]);
 
 export type SiteSaveResult = { ok?: boolean; error?: string };
 
-const RICH_FIELDS = new Set(["text", "intro", "a"]);
+const RICH_FIELDS = new Set(["text", "intro", "a", "dishes"]);
 
 /** Vyčistí bohatý text ve všech jazycích (rekurzivně v položkách seznamů). */
 function cleanRich(value: unknown, key = ""): unknown {
@@ -52,12 +52,14 @@ export async function saveSite(raw: unknown, template: string): Promise<SiteSave
   if (!isTemplateId(template)) return { error: "Neznámá šablona." };
   if (!Array.isArray(raw)) return { error: "Neplatná data." };
   const sections: Section[] = [];
-  for (const item of raw as { type?: string; enabled?: boolean; content?: unknown }[]) {
+  for (const item of raw as { id?: unknown; type?: string; enabled?: boolean; content?: unknown }[]) {
     const t = typeSchema.safeParse(item?.type);
     if (!t.success) return { error: "Neznámá sekce." };
     try {
       const content = parseSectionContent(t.data, cleanRich(item.content ?? {}));
-      sections.push({ id: t.data, type: t.data, enabled: t.data === "hero" ? true : item.enabled !== false, content } as Section);
+      // Opakovatelné sekce si nesou vlastní id (ověří ho normalizeSections)
+      const id = isRepeatable(t.data) && typeof item.id === "string" ? item.id : t.data;
+      sections.push({ id, type: t.data, enabled: t.data === "hero" ? true : item.enabled !== false, content } as Section);
     } catch {
       return { error: "Některý text je moc dlouhý. Zkraťte ho prosím." };
     }

@@ -1,11 +1,12 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { FONTS } from "@/lib/templates";
 import type { Section } from "@/lib/site-sections";
 import { LineText, RichText, Sec, SitePhoto, useEdit } from "../edit";
 import type { SiteModel } from "../model";
 import { ContactList, EventsHint, FaqList, GiftAccount, RsvpSlot, SANS, Title, address, daysLeft, daysWord, defaultTitle, fmtDate, mapUrl, place, textOf, useSections, when } from "./shared";
+import { KeyInfo, SectionExtras, type ExtrasTheme } from "./extras";
 
 const red = "#c3122f";
 const ink = "#141414";
@@ -35,6 +36,8 @@ const WORDS = {
   en: { issue: "The wedding guest issue", free: "Free, with love", tagline: "The big yes", toDays: "to go", reply: "RSVP", by: "by", contents: "Contents", contentsIntro: "A wedding issue published only once.", feature: "Feature", today: "Today" },
 };
 
+const THEME: ExtrasTheme = { accent: red, line: ink, display: bodoni, card: "border-t", cardStyle: { borderColor: ink } };
+
 export function MagazinSite({ model }: { model: SiteModel }) {
   const { locale, update, editing } = useEdit();
   const sections = useSections(model);
@@ -44,12 +47,12 @@ export function MagazinSite({ model }: { model: SiteModel }) {
   const days = daysLeft(model.date);
   const first = model.events[0];
   const t0 = first ? when(first, locale, model.timeZone) : null;
-  const toc = sections.filter((s) => s.type !== "hero");
   const deadline = model.rsvpDeadline ? new Intl.DateTimeFormat(locale === "cs" ? "cs-CZ" : "en-GB", { day: "numeric", month: "long", timeZone: model.timeZone }).format(new Date(model.rsvpDeadline)) : null;
   const titleOf = (s: Section) => {
     const v = (s.content as { title?: { cs: string; en: string } }).title;
     return (locale === "en" ? v?.en || v?.cs : v?.cs || v?.en) || defaultTitle(s.type, locale);
   };
+  const toc = sections.filter((s) => s.type !== "hero" && titleOf(s));
 
   const render = (s: Section): ReactNode => {
     switch (s.type) {
@@ -92,7 +95,7 @@ export function MagazinSite({ model }: { model: SiteModel }) {
                   </div>
                 ) : null}
                 {toc.slice(1, 3).map((s2) => (
-                  <a key={s2.type} href={`#${s2.type}`} className="pointer-events-auto text-[22px] leading-tight hover:underline">
+                  <a key={s2.id} href={`#${s2.id}`} className="pointer-events-auto text-[22px] leading-tight hover:underline">
                     {titleOf(s2)}
                   </a>
                 ))}
@@ -128,8 +131,8 @@ export function MagazinSite({ model }: { model: SiteModel }) {
                 </div>
                 <ol className="flex flex-col">
                   {toc.map((s2, i) => (
-                    <li key={s2.type} className="border-t last:border-b" style={{ borderColor: ink }}>
-                      <a href={`#${s2.type}`} className="grid grid-cols-[3.5rem_1fr] items-baseline py-4 @3xl:grid-cols-[4.5rem_1fr]">
+                    <li key={s2.id} className="border-t last:border-b" style={{ borderColor: ink }}>
+                      <a href={`#${s2.id}`} className="grid grid-cols-[3.5rem_1fr] items-baseline py-4 @3xl:grid-cols-[4.5rem_1fr]">
                         <span className="text-[36px] leading-none tabular-nums @3xl:text-[44px]" style={{ ...bodoni, color: red }}>
                           {String(i * 2 + 3).padStart(2, "0")}
                         </span>
@@ -201,14 +204,18 @@ export function MagazinSite({ model }: { model: SiteModel }) {
       case "location":
       case "dresscode":
       case "accommodation":
+      case "gallery":
+      case "menu":
+      case "custom":
       case "gifts":
         return (
-          <Sec key={s.type} s={s} className="mx-auto max-w-[1280px] px-5 py-16 @3xl:px-16 @3xl:py-20">
+          <Sec key={s.id} s={s} className="mx-auto max-w-[1280px] px-5 py-16 @3xl:px-16 @3xl:py-20">
             {s.type === "location" ? <SitePhoto path={s.content.photo} onPath={(p) => update("location", { photo: p })} sizes="100vw" className="mb-12 aspect-[21/9]" placeholder={<div className="absolute inset-0" style={{ background: "radial-gradient(110% 80% at 60% 20%,#eef1e8,#a9b9a0 50%,#4c5d47)" }} />} /> : null}
             <div className="grid gap-8 border-t pt-8 @3xl:grid-cols-[1fr_1.4fr] @3xl:gap-20" style={{ borderColor: ink }}>
               <Title s={s} className="text-[clamp(48px,8cqw,76px)] leading-[0.92] tracking-[-0.03em]" style={bodoni} />
               <div>
-                <RichText type={s.type} field="text" value={textOf(s)} className="text-[20px] leading-[1.6] @3xl:text-[22px]" />
+                <RichText type={s.id} field="text" value={textOf(s)} className="text-[20px] leading-[1.6] @3xl:text-[22px]" />
+                <SectionExtras s={s} theme={THEME} />
                 {s.type === "gifts" ? <GiftAccount model={model} s={s} className="mt-10 border p-6" style={{ borderColor: red }} /> : null}
               </div>
             </div>
@@ -250,7 +257,7 @@ export function MagazinSite({ model }: { model: SiteModel }) {
   return (
     <div className="@container min-h-svh overflow-hidden bg-white" style={{ color: ink, fontFamily: FONTS.instrument }}>
       {model.banner}
-      {sections.map(render)}
+      {sections.map((s) => (s.type === "hero" ? <Fragment key={s.id}>{render(s)}<KeyInfo s={s} model={model} theme={THEME} className="pb-4 pt-16" /></Fragment> : render(s)))}
     </div>
   );
 }

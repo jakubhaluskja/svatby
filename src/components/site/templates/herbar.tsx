@@ -1,11 +1,12 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { FONTS } from "@/lib/templates";
 import type { Section } from "@/lib/site-sections";
 import { RichText, Sec, SitePhoto, useEdit } from "../edit";
 import type { SiteModel } from "../model";
 import { ContactList, EventsHint, FaqList, GiftAccount, RsvpSlot, Title, address, fmtDate, grain, mapUrl, place, textOf, useSections, when } from "./shared";
+import { KeyInfo, SectionExtras, type ExtrasTheme } from "./extras";
 
 const ink = "#2b3a2a";
 const rust = "#8a4b2f";
@@ -107,6 +108,8 @@ const WORDS = {
 function roman(m: number) {
   return ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"][m - 1] ?? "";
 }
+
+const THEME: ExtrasTheme = { accent: rust, line: `${ink}33`, display: gloock, card: "border bg-[#fdfcf8]", cardStyle: { borderColor: `${ink}33` } };
 
 export function HerbarSite({ model }: { model: SiteModel }) {
   const { locale, update } = useEdit();
@@ -223,12 +226,15 @@ export function HerbarSite({ model }: { model: SiteModel }) {
       case "location":
       case "dresscode":
       case "accommodation":
+      case "gallery":
+      case "menu":
+      case "custom":
       case "gifts": {
-        const i = ["location", "dresscode", "accommodation", "gifts"].indexOf(s.type);
+        const i = sections.indexOf(s) % 4;
         const Plant = PLANTS[(i + 1) % PLANTS.length];
         const flip = i % 2 === 1;
         return (
-          <Sec key={s.type} s={s} className="px-5 pt-24 @3xl:px-10">
+          <Sec key={s.id} s={s} className="px-5 pt-24 @3xl:px-10">
             <Sheet rotate={flip ? 0.6 : -0.6} className={`mx-auto grid max-w-[1000px] items-center gap-8 px-7 py-12 @3xl:gap-12 @3xl:px-14 ${flip ? "@3xl:grid-cols-[1fr_200px]" : "@3xl:grid-cols-[200px_1fr]"}`}>
               <div className={`relative mx-auto hidden h-64 w-40 @3xl:block ${flip ? "@3xl:order-2" : ""}`}>
                 <Plant className="h-full w-full" />
@@ -240,7 +246,8 @@ export function HerbarSite({ model }: { model: SiteModel }) {
                 </p>
                 <Title s={s} className="mt-2 block text-[clamp(38px,7cqw,56px)] leading-none" style={gloock} />
                 {s.type === "location" ? <SitePhoto path={s.content.photo} onPath={(p) => update("location", { photo: p })} className="mt-6 aspect-[16/9]" placeholder={<div className="absolute inset-0" style={{ background: "linear-gradient(160deg,#e6eadf,#bfc8b3)" }} />} /> : null}
-                <RichText type={s.type} field="text" value={textOf(s)} className="mt-6 text-[19px] leading-relaxed @3xl:text-[21px]" />
+                <RichText type={s.id} field="text" value={textOf(s)} className="mt-6 text-[19px] leading-relaxed @3xl:text-[21px]" />
+                <SectionExtras s={s} theme={THEME} />
                 {s.type === "gifts" ? <GiftAccount model={model} s={s} className="mt-8 border-t pt-8" style={{ borderColor: `${ink}22` }} /> : null}
               </div>
             </Sheet>
@@ -287,7 +294,7 @@ export function HerbarSite({ model }: { model: SiteModel }) {
     <div className="@container relative min-h-svh overflow-hidden pb-24" style={{ background: "#e4e7dc", color: ink, fontFamily: FONTS.instrument }}>
       <div className="pointer-events-none absolute inset-0 opacity-[.08]" style={grain} />
       {model.banner}
-      <div className="relative">{sections.map(render)}</div>
+      <div className="relative">{sections.map((s) => (s.type === "hero" ? <Fragment key={s.id}>{render(s)}<KeyInfo s={s} model={model} theme={THEME} className="pt-20" /></Fragment> : render(s)))}</div>
     </div>
   );
 }

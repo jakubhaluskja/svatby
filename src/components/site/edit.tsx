@@ -5,13 +5,14 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import type { Locale } from "@/lib/i18n";
 import { photoUrl } from "@/lib/media";
 import { escapeHtml, richToPlain, sanitizeRich } from "@/lib/rich-text";
-import { lt, type LText, type Section, type SectionType } from "@/lib/site-sections";
+import { lt, type LText, type Section } from "@/lib/site-sections";
 
 /** Kontext úprav webu. Na veřejném webu je editing=false a vše se jen zobrazí. */
 export type EditApi = {
   editing: boolean;
   locale: Locale;
-  update: (type: SectionType, patch: Record<string, unknown>) => void;
+  /** Změna obsahu sekce podle jejího id (u jedinečných sekcí id = typ). */
+  update: (id: string, patch: Record<string, unknown>) => void;
   upload: (file: File) => Promise<string | null>;
   sectionControls?: (s: Section) => ReactNode;
 };
@@ -37,7 +38,8 @@ export function RichText({
   style,
   placeholder = "Napište text…",
 }: {
-  type?: SectionType;
+  /** Id sekce, do které se text zapíše (pole field) */
+  type?: string;
   field?: string;
   value: LText | undefined;
   /** Vlastní zápis (položky seznamů); jinak se zapíše do sekce type.field */
@@ -159,7 +161,7 @@ export function LineText({
   className = "",
   style,
 }: {
-  type?: SectionType;
+  type?: string;
   field?: string;
   value: LText | undefined;
   fallback?: string;
@@ -313,7 +315,7 @@ export function SitePhoto({
 export function Sec({ s, children, className = "", style, id }: { s: Section; children: ReactNode; className?: string; style?: CSSProperties; id?: string }) {
   const { editing, sectionControls } = useEdit();
   return (
-    <section id={id ?? s.type} data-section={s.type} className={`${editing ? "site-sec-edit group/sec relative" : ""} ${className}`} style={style}>
+    <section id={id ?? s.id} data-section={s.id} className={`${editing ? "site-sec-edit group/sec relative" : ""} ${className}`} style={style}>
       {editing && sectionControls ? sectionControls(s) : null}
       {children}
     </section>
@@ -344,5 +346,139 @@ export function RemoveButton({ onClick, label }: { onClick: () => void; label: s
     <button type="button" onClick={onClick} aria-label={label} title={label} className="absolute -right-2 -top-2 z-10 grid size-7 place-items-center rounded-full bg-white text-[15px] text-[#a33a2f] shadow ring-1 ring-black/10">
       ×
     </button>
+  );
+}
+
+/** Kulatá fotka (kontakty). V editoru se vybírá klepnutím. */
+export function AvatarPhoto({ path, onPath, className = "" }: { path: string | null; onPath: (p: string | null) => void; className?: string }) {
+  const { editing, upload } = useEdit();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const url = photoUrl(path);
+  if (!editing && !url) return null;
+  return (
+    <div className={`relative shrink-0 self-center ${className}`} style={{ fontFamily: "var(--font-geist-sans), sans-serif", fontStyle: "normal" }}>
+      <div className="relative size-full overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, currentColor 10%, transparent)" }}>
+        {url ? <Image src={url} alt="" fill sizes="96px" className="object-cover" /> : null}
+        {editing ? (
+          <button type="button" onClick={() => input.current?.click()} disabled={busy} className={`absolute inset-0 grid place-items-center text-[12px] font-medium leading-tight ${url ? "bg-black/0 text-transparent hover:bg-black/40 hover:text-white" : "opacity-70"}`}>
+            {busy ? "…" : url ? "Vyměnit" : "+ Fotka"}
+          </button>
+        ) : null}
+      </div>
+      {editing && url ? (
+        <button type="button" onClick={() => onPath(null)} aria-label="Odebrat fotku" className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full bg-white text-[13px] text-[#a33a2f] shadow ring-1 ring-black/10">
+          ×
+        </button>
+      ) : null}
+      {editing ? (
+        <input
+          ref={input}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          tabIndex={-1}
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            setBusy(true);
+            const p = await upload(f);
+            setBusy(false);
+            e.target.value = "";
+            if (p) onPath(p);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** Mřížka fotek. V editoru jde přidat víc fotek naráz, odebrat a posunout; na webu se otevřou ve větším. */
+export function PhotoGrid({
+  photos,
+  onChange,
+  max,
+  className = "grid grid-cols-2 gap-3 @xl:grid-cols-3",
+  itemClass = "aspect-square",
+  addLabel = "Přidat fotky",
+  sizes = "(min-width: 768px) 33vw, 50vw",
+  onOpen,
+}: {
+  photos: string[];
+  onChange: (next: string[]) => void;
+  max: number;
+  className?: string;
+  itemClass?: string;
+  addLabel?: string;
+  sizes?: string;
+  onOpen?: (i: number) => void;
+}) {
+  const { editing, upload } = useEdit();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(0);
+  if (!editing && !photos.length) return null;
+  const swap = (i: number, j: number) => {
+    const next = [...photos];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+  const sans: CSSProperties = { fontFamily: "var(--font-geist-sans), sans-serif", fontStyle: "normal", letterSpacing: 0, textTransform: "none" };
+  return (
+    <div className={className}>
+      {photos.map((p, i) => {
+        const url = photoUrl(p);
+        return (
+          <div key={`${p}-${i}`} className={`group/ph relative overflow-hidden ${itemClass}`} style={{ background: "color-mix(in srgb, currentColor 8%, transparent)" }}>
+            {url ? <Image src={url} alt="" fill sizes={sizes} className="object-cover" /> : null}
+            {!editing && onOpen ? <button type="button" onClick={() => onOpen(i)} aria-label={`Zvětšit fotku ${i + 1}`} className="absolute inset-0 cursor-zoom-in" /> : null}
+            {editing ? (
+              <div className="absolute inset-x-1.5 top-1.5 flex justify-between opacity-0 transition-opacity group-hover/ph:opacity-100 group-focus-within/ph:opacity-100" style={sans}>
+                <span className="flex gap-1">
+                  <button type="button" onClick={() => swap(i, i - 1)} disabled={i === 0} aria-label="Posunout dopředu" className="grid size-7 place-items-center rounded-full bg-white/95 text-[13px] text-[#1e2b26] shadow disabled:opacity-40">←</button>
+                  <button type="button" onClick={() => swap(i, i + 1)} disabled={i === photos.length - 1} aria-label="Posunout dozadu" className="grid size-7 place-items-center rounded-full bg-white/95 text-[13px] text-[#1e2b26] shadow disabled:opacity-40">→</button>
+                </span>
+                <button type="button" onClick={() => onChange(photos.filter((_, k) => k !== i))} aria-label="Odebrat fotku" className="grid size-7 place-items-center rounded-full bg-white/95 text-[15px] text-[#a33a2f] shadow">×</button>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+      {editing && photos.length < max ? (
+        <button
+          type="button"
+          onClick={() => input.current?.click()}
+          disabled={busy > 0}
+          className={`flex flex-col items-center justify-center gap-1 border border-dashed text-[14px] opacity-70 hover:opacity-100 ${itemClass}`}
+          style={{ ...sans, borderColor: "currentColor" }}
+        >
+          <span className="text-[22px] leading-none">+</span>
+          {busy ? `Nahrávám (${busy})…` : addLabel}
+          <span className="text-[12px] opacity-70">
+            {photos.length} / {max}
+          </span>
+          <input
+            ref={input}
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            tabIndex={-1}
+            onChange={async (e) => {
+              const files = Array.from(e.target.files ?? []).slice(0, max - photos.length);
+              e.target.value = "";
+              if (!files.length) return;
+              const added: string[] = [];
+              for (let k = 0; k < files.length; k++) {
+                setBusy(files.length - k);
+                const p = await upload(files[k]);
+                if (p) added.push(p);
+              }
+              setBusy(0);
+              if (added.length) onChange([...photos, ...added].slice(0, max));
+            }}
+          />
+        </button>
+      ) : null}
+    </div>
   );
 }

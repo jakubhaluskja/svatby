@@ -107,8 +107,8 @@ export const siteCopy = (locale: Locale): SiteCopy => SITE_COPY[locale] as SiteC
 
 /** Nadpisy sekcí na webu. */
 export const SECTION_TITLES = {
-  cs: { schedule: "Program", location: "Jak se k nám dostanete", story: "Náš příběh", dresscode: "Dress code", accommodation: "Ubytování", gifts: "Dary", faq: "Časté dotazy", contacts: "Kontakty", rsvp: "Potvrzení účasti" },
-  en: { schedule: "Schedule", location: "Getting there", story: "Our story", dresscode: "Dress code", accommodation: "Accommodation", gifts: "Gifts", faq: "FAQ", contacts: "Contacts", rsvp: "RSVP" },
+  cs: { schedule: "Program", location: "Jak se k nám dostanete", story: "Náš příběh", dresscode: "Dress code", accommodation: "Ubytování", gifts: "Dary", faq: "Časté dotazy", contacts: "Důležité kontakty", rsvp: "Potvrzení účasti", gallery: "Naše fotky", menu: "Svatební menu", custom: "" },
+  en: { schedule: "Schedule", location: "Getting there", story: "Our story", dresscode: "Dress code", accommodation: "Accommodation", gifts: "Gifts", faq: "FAQ", contacts: "Key contacts", rsvp: "RSVP", gallery: "Our photos", menu: "Wedding menu", custom: "" },
 } as const;
 
 export const GIFT_COPY = {
